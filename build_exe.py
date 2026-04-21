@@ -34,6 +34,8 @@ if os.path.exists(new_exe_path):
         print(f"将构建到 output/dist 目录")
         os.makedirs(dist_dir, exist_ok=True)
         final_dist_dir = dist_dir
+    else:
+        final_dist_dir = os.path.join(project_root, "dist")
 else:
     final_dist_dir = os.path.join(project_root, "dist")
 
@@ -49,7 +51,7 @@ args = [
     # 添加数据文件
     f'--add-data={os.path.join(project_root, "src")};src',
 
-    # 隐藏导入
+    # 隐藏导入 - 项目模块
     '--hidden-import=src.tray_app',
     '--hidden-import=src.windows.settings_window',
     '--hidden-import=src.windows.hud_window',
@@ -58,6 +60,26 @@ args = [
     '--hidden-import=src.utils.icon_helper',
     '--hidden-import=src.utils.settings_manager',
     '--hidden-import=src.utils.version',
+    '--hidden-import=src.core.gesture_service',
+    '--hidden-import=src.core.gesture_controller',
+    '--hidden-import=src.core.system_control',
+    '--hidden-import=src.utils.gesture_names',
+    '--hidden-import=src.windows.gesture_mapping_dialog',
+
+    # 隐藏导入 - MediaPipe 相关
+    '--hidden-import=mediapipe',
+    '--hidden-import=mediapipe.tasks',
+    '--hidden-import=mediapipe.tasks.python',
+    '--hidden-import=mediapipe.tasks.python.vision',
+    '--hidden-import=mediapipe.tasks.python.core.base_options',
+    '--hidden-import=mediapipe.tasks.python.components.containers',
+    '--hidden-import=mediapipe.python',
+    '--hidden-import=mediapipe.python.solutions',
+    '--hidden-import=mediapipe.framework.formats',
+    '--hidden-import=mediapipe.framework.formats.detection',
+    '--hidden-import=mediapipe.framework.formats.landmark',
+    '--hidden-import=mediapipe.framework.formats.rect',
+    '--collect-all=mediapipe',
 
     # 图标（如果有的话）
     # '--icon=icon.ico',

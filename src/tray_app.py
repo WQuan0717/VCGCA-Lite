@@ -10,6 +10,7 @@ from src.windows.debug_window import DebugWindow
 from src.windows.splash_window import SplashWindow
 from src.utils.icon_helper import create_default_icon
 from src.utils.settings_manager import settings_manager
+from src.core.gesture_service import gesture_service
 
 
 class TrayApplication:
@@ -114,6 +115,10 @@ class TrayApplication:
                 self.hud_window.apply_settings()
         
     def quit(self):
+        # 停止手势识别服务
+        if gesture_service.isRunning():
+            gesture_service.stop()
+            print("手势识别服务已停止")
         # 清理所有窗口
         if self.settings_window:
             self.settings_window.close()
@@ -135,13 +140,38 @@ class TrayApplication:
             self.splash_window.finished.connect(self.on_splash_finished)
             self.splash_window.start()
         else:
-            # 直接显示托盘图标
+            # 直接显示托盘图标并启动手势识别
             self.tray_icon.show()
+            self.start_gesture_service()
 
     def on_splash_finished(self):
         """启动动画完成后"""
         self.splash_window = None
         self.tray_icon.show()
+        # 自动启动手势识别服务
+        self.start_gesture_service()
+
+    def start_gesture_service(self):
+        """启动手势识别服务"""
+        if not gesture_service.isRunning():
+            # 连接日志信号到控制台输出
+            gesture_service.log_message.connect(self.on_gesture_log)
+            gesture_service.gesture_detected.connect(self.on_gesture_detected)
+            # 初始化并启动
+            if gesture_service.initialize():
+                gesture_service.start()
+                print("手势识别服务已自动启动")
+            else:
+                print("手势识别服务启动失败")
+
+    def on_gesture_log(self, message):
+        """接收手势识别日志"""
+        print(f"[Gesture] {message}")
+
+    def on_gesture_detected(self, gesture_name, confidence):
+        """处理检测到的手势"""
+        # 这里可以添加手势对应的操作
+        pass
 
     def run(self):
         if not QSystemTrayIcon.isSystemTrayAvailable():

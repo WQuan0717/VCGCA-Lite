@@ -32,6 +32,17 @@ class SettingsManager(QObject):
                 "opacity": 80,
                 "position": "右上"
             },
+            "gesture": {
+                "prepare_time": 500,
+                "change_time": 1000,
+                "cooldown_time": 2000,
+                "mappings": [
+                    {"prepare": "Open_Palm", "response": "Closed_Fist", "action": "screenshot"},
+                    {"prepare": "Open_Palm", "response": "Thumb_Up", "action": "volume_up"},
+                    {"prepare": "Open_Palm", "response": "Thumb_Down", "action": "volume_down"},
+                    {"prepare": "Victory", "response": "Pointing_Up", "action": "show_desktop"}
+                ]
+            },
             "advanced": {
                 "debug_mode": False,
                 "log_to_file": False

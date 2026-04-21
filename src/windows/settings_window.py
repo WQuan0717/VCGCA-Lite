@@ -1,12 +1,16 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QLineEdit, QCheckBox, QGroupBox,
                              QSpinBox, QComboBox, QTabWidget, QSlider, QGridLayout,
-                             QTextBrowser)
+                             QTextBrowser, QTableWidget, QTableWidgetItem, QHeaderView,
+                             QAbstractItemView, QDialog)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont
 
 from src.utils.settings_manager import settings_manager
 from src.utils.version import get_version_string, get_full_version_info, APP_NAME, APP_DESCRIPTION
+from src.windows.gesture_mapping_dialog import GestureMappingDialog
+from src.core.system_control import SystemController
+from src.utils.gesture_names import get_gesture_display_name, get_gesture_english_name
 
 
 class SettingsWindow(QWidget):
@@ -33,6 +37,7 @@ class SettingsWindow(QWidget):
         tabs = QTabWidget()
         tabs.addTab(self.create_general_tab(), "常规")
         tabs.addTab(self.create_display_tab(), "显示")
+        tabs.addTab(self.create_gesture_tab(), "手势控制")
         tabs.addTab(self.create_advanced_tab(), "高级")
         tabs.addTab(self.create_about_tab(), "关于")
 
@@ -223,6 +228,233 @@ class SettingsWindow(QWidget):
         self.v_pos_label.setText(text)
         self.on_value_changed()
 
+    def create_gesture_tab(self):
+        """创建手势控制标签页"""
+        tab = QWidget()
+        layout = QVBoxLayout()
+
+        # 时间设置区域（横向排列）
+        time_group = QGroupBox("时间设置")
+        time_layout = QHBoxLayout()
+
+        # 准备时间
+        prepare_time_layout = QVBoxLayout()
+        prepare_time_layout.addWidget(QLabel("准备时间:"))
+        self.prepare_time_spin = QSpinBox()
+        self.prepare_time_spin.setRange(100, 5000)
+        self.prepare_time_spin.setValue(500)
+        self.prepare_time_spin.setSuffix(" ms")
+        prepare_time_layout.addWidget(self.prepare_time_spin)
+        time_layout.addLayout(prepare_time_layout)
+
+        time_layout.addSpacing(20)
+
+        # 变化时间
+        change_time_layout = QVBoxLayout()
+        change_time_layout.addWidget(QLabel("变化时间:"))
+        self.change_time_spin = QSpinBox()
+        self.change_time_spin.setRange(100, 5000)
+        self.change_time_spin.setValue(1000)
+        self.change_time_spin.setSuffix(" ms")
+        change_time_layout.addWidget(self.change_time_spin)
+        time_layout.addLayout(change_time_layout)
+
+        time_layout.addSpacing(20)
+
+        # 冷静时间
+        cooldown_time_layout = QVBoxLayout()
+        cooldown_time_layout.addWidget(QLabel("冷静时间:"))
+        self.cooldown_time_spin = QSpinBox()
+        self.cooldown_time_spin.setRange(0, 10000)
+        self.cooldown_time_spin.setValue(2000)
+        self.cooldown_time_spin.setSuffix(" ms")
+        cooldown_time_layout.addWidget(self.cooldown_time_spin)
+        time_layout.addLayout(cooldown_time_layout)
+
+        time_layout.addStretch()
+        time_group.setLayout(time_layout)
+        layout.addWidget(time_group)
+
+        # 控制功能映射表
+        mapping_group = QGroupBox("手势控制功能映射")
+        mapping_layout = QVBoxLayout()
+
+        # 创建表格
+        self.gesture_mapping_table = QTableWidget()
+        self.gesture_mapping_table.setColumnCount(3)
+        self.gesture_mapping_table.setHorizontalHeaderLabels(["准备手势", "响应手势", "控制功能"])
+        self.gesture_mapping_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.gesture_mapping_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.gesture_mapping_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.gesture_mapping_table.setAlternatingRowColors(True)
+
+        # 添加示例数据
+        self._load_gesture_mappings()
+
+        mapping_layout.addWidget(self.gesture_mapping_table)
+
+        # 表格操作按钮
+        table_btn_layout = QHBoxLayout()
+        self.add_mapping_btn = QPushButton("添加映射")
+        self.add_mapping_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #27ae60;
+                color: white;
+                padding: 5px 15px;
+                border: none;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #2ecc71;
+            }
+        """)
+        self.add_mapping_btn.clicked.connect(self.add_gesture_mapping)
+
+        self.edit_mapping_btn = QPushButton("编辑")
+        self.edit_mapping_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                padding: 5px 15px;
+                border: none;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        self.edit_mapping_btn.clicked.connect(self.edit_gesture_mapping)
+
+        self.delete_mapping_btn = QPushButton("删除")
+        self.delete_mapping_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #c0392b;
+                color: white;
+                padding: 5px 15px;
+                border: none;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #e74c3c;
+            }
+        """)
+        self.delete_mapping_btn.clicked.connect(self.delete_gesture_mapping)
+
+        table_btn_layout.addWidget(self.add_mapping_btn)
+        table_btn_layout.addWidget(self.edit_mapping_btn)
+        table_btn_layout.addWidget(self.delete_mapping_btn)
+        table_btn_layout.addStretch()
+
+        mapping_layout.addLayout(table_btn_layout)
+        mapping_group.setLayout(mapping_layout)
+        layout.addWidget(mapping_group)
+
+        layout.addStretch()
+        tab.setLayout(layout)
+        return tab
+
+    def _load_gesture_mappings(self):
+        """加载手势映射到表格（默认数据）"""
+        # 默认示例数据 - 使用action_key
+        default_mappings = [
+            {"prepare": "Open_Palm", "response": "Closed_Fist", "action": "screenshot"},
+            {"prepare": "Open_Palm", "response": "Thumb_Up", "action": "volume_up"},
+            {"prepare": "Open_Palm", "response": "Thumb_Down", "action": "volume_down"},
+            {"prepare": "Victory", "response": "Pointing_Up", "action": "show_desktop"},
+        ]
+        self._load_gesture_mappings_from_settings(default_mappings)
+
+    def _load_gesture_mappings_from_settings(self, mappings):
+        """从设置加载手势映射到表格"""
+        if not mappings:
+            self._load_gesture_mappings()
+            return
+
+        self.gesture_mapping_table.setRowCount(len(mappings))
+        for row, mapping in enumerate(mappings):
+            # 将英文手势名称转换为中文显示
+            prepare_english = mapping.get("prepare", "")
+            response_english = mapping.get("response", "")
+            self.gesture_mapping_table.setItem(row, 0, QTableWidgetItem(get_gesture_display_name(prepare_english)))
+            self.gesture_mapping_table.setItem(row, 1, QTableWidgetItem(get_gesture_display_name(response_english)))
+            # 将action_key转换为显示名称
+            action_key = mapping.get("action", "")
+            action_display = SystemController.get_action_display_name(action_key)
+            self.gesture_mapping_table.setItem(row, 2, QTableWidgetItem(action_display))
+
+    def _get_gesture_mappings_from_table(self):
+        """从表格获取手势映射数据"""
+        mappings = []
+        for row in range(self.gesture_mapping_table.rowCount()):
+            # 表格中存储的是中文手势名称，需要转换回英文
+            prepare_display = self.gesture_mapping_table.item(row, 0).text() if self.gesture_mapping_table.item(row, 0) else ""
+            response_display = self.gesture_mapping_table.item(row, 1).text() if self.gesture_mapping_table.item(row, 1) else ""
+            prepare = get_gesture_english_name(prepare_display)
+            response = get_gesture_english_name(response_display)
+            # 表格中存储的是显示名称，需要查找对应的action_key
+            action_display = self.gesture_mapping_table.item(row, 2).text() if self.gesture_mapping_table.item(row, 2) else ""
+            # 通过显示名称查找key
+            action_key = None
+            for key, display in SystemController.AVAILABLE_ACTIONS.items():
+                if display == action_display:
+                    action_key = key
+                    break
+            if action_key:
+                mappings.append({"prepare": prepare, "response": response, "action": action_key})
+        return mappings
+
+    def add_gesture_mapping(self):
+        """添加新的手势映射"""
+        dialog = GestureMappingDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            data = dialog.get_data()
+            row = self.gesture_mapping_table.rowCount()
+            self.gesture_mapping_table.insertRow(row)
+            # 将英文手势名称转换为中文显示
+            self.gesture_mapping_table.setItem(row, 0, QTableWidgetItem(get_gesture_display_name(data["prepare"])))
+            self.gesture_mapping_table.setItem(row, 1, QTableWidgetItem(get_gesture_display_name(data["response"])))
+            # 将action_key转换为显示名称显示在表格中
+            action_display = SystemController.get_action_display_name(data["action"])
+            self.gesture_mapping_table.setItem(row, 2, QTableWidgetItem(action_display))
+            self.on_value_changed()
+
+    def edit_gesture_mapping(self):
+        """编辑选中的手势映射"""
+        current_row = self.gesture_mapping_table.currentRow()
+        if current_row >= 0:
+            # 获取当前行的数据（中文显示名称）
+            prepare_display = self.gesture_mapping_table.item(current_row, 0).text() if self.gesture_mapping_table.item(current_row, 0) else ""
+            response_display = self.gesture_mapping_table.item(current_row, 1).text() if self.gesture_mapping_table.item(current_row, 1) else ""
+            # 转换为英文名称传递给对话框
+            prepare = get_gesture_english_name(prepare_display)
+            response = get_gesture_english_name(response_display)
+            # 表格中存储的是显示名称，需要查找对应的action_key
+            action_display = self.gesture_mapping_table.item(current_row, 2).text() if self.gesture_mapping_table.item(current_row, 2) else ""
+            action_key = None
+            for key, display in SystemController.AVAILABLE_ACTIONS.items():
+                if display == action_display:
+                    action_key = key
+                    break
+
+            # 打开编辑对话框
+            dialog = GestureMappingDialog(self, prepare, response, action_key)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                data = dialog.get_data()
+                # 将英文手势名称转换为中文显示
+                self.gesture_mapping_table.setItem(current_row, 0, QTableWidgetItem(get_gesture_display_name(data["prepare"])))
+                self.gesture_mapping_table.setItem(current_row, 1, QTableWidgetItem(get_gesture_display_name(data["response"])))
+                # 将action_key转换为显示名称显示在表格中
+                new_action_display = SystemController.get_action_display_name(data["action"])
+                self.gesture_mapping_table.setItem(current_row, 2, QTableWidgetItem(new_action_display))
+                self.on_value_changed()
+
+    def delete_gesture_mapping(self):
+        """删除选中的手势映射"""
+        current_row = self.gesture_mapping_table.currentRow()
+        if current_row >= 0:
+            self.gesture_mapping_table.removeRow(current_row)
+            self.on_value_changed()
+
     def create_advanced_tab(self):
         tab = QWidget()
         layout = QVBoxLayout()
@@ -319,6 +551,11 @@ class SettingsWindow(QWidget):
         self.width_spin.valueChanged.connect(self.on_value_changed)
         self.height_spin.valueChanged.connect(self.on_value_changed)
 
+        # 手势控制设置
+        self.prepare_time_spin.valueChanged.connect(self.on_value_changed)
+        self.change_time_spin.valueChanged.connect(self.on_value_changed)
+        self.cooldown_time_spin.valueChanged.connect(self.on_value_changed)
+
         # 高级设置
         self.debug_mode_cb.stateChanged.connect(self.on_value_changed)
         self.log_to_file_cb.stateChanged.connect(self.on_value_changed)
@@ -358,6 +595,15 @@ class SettingsWindow(QWidget):
         self.on_h_pos_changed(h_pos)
         self.on_v_pos_changed(v_pos)
 
+        # 手势控制设置
+        gesture = settings_manager.get_section("gesture")
+        self.prepare_time_spin.setValue(gesture.get("prepare_time", 500))
+        self.change_time_spin.setValue(gesture.get("change_time", 1000))
+        self.cooldown_time_spin.setValue(gesture.get("cooldown_time", 2000))
+
+        # 加载手势映射
+        self._load_gesture_mappings_from_settings(gesture.get("mappings", []))
+
         # 高级设置
         advanced = settings_manager.get_section("advanced")
         self.debug_mode_cb.setChecked(advanced.get("debug_mode", False))
@@ -382,6 +628,10 @@ class SettingsWindow(QWidget):
             "height": self.height_spin.value(),
             "h_position": self.h_pos_slider.value(),
             "v_position": self.v_pos_slider.value(),
+            "prepare_time": self.prepare_time_spin.value(),
+            "change_time": self.change_time_spin.value(),
+            "cooldown_time": self.cooldown_time_spin.value(),
+            "gesture_mappings": self._get_gesture_mappings_from_table(),
             "debug_mode": self.debug_mode_cb.isChecked(),
             "log_to_file": self.log_to_file_cb.isChecked()
         }
@@ -398,6 +648,12 @@ class SettingsWindow(QWidget):
         settings_manager.set("display", "height", self.height_spin.value())
         settings_manager.set("display", "h_position", self.h_pos_slider.value())
         settings_manager.set("display", "v_position", self.v_pos_slider.value())
+
+        # 手势控制设置
+        settings_manager.set("gesture", "prepare_time", self.prepare_time_spin.value())
+        settings_manager.set("gesture", "change_time", self.change_time_spin.value())
+        settings_manager.set("gesture", "cooldown_time", self.cooldown_time_spin.value())
+        settings_manager.set("gesture", "mappings", self._get_gesture_mappings_from_table())
 
         # 高级设置
         settings_manager.set("advanced", "debug_mode", self.debug_mode_cb.isChecked())
@@ -434,6 +690,11 @@ class SettingsWindow(QWidget):
         self.on_h_pos_changed(h_pos)
         self.on_v_pos_changed(v_pos)
 
+        self.prepare_time_spin.setValue(self._original_values.get("prepare_time", 500))
+        self.change_time_spin.setValue(self._original_values.get("change_time", 1000))
+        self.cooldown_time_spin.setValue(self._original_values.get("cooldown_time", 2000))
+        self._load_gesture_mappings_from_settings(self._original_values.get("gesture_mappings", []))
+
         self.debug_mode_cb.setChecked(self._original_values.get("debug_mode", False))
         self.log_to_file_cb.setChecked(self._original_values.get("log_to_file", False))
 
@@ -454,6 +715,9 @@ class SettingsWindow(QWidget):
             "height": 150,
             "h_position": 100,  # 右侧
             "v_position": 0,    # 顶部
+            "prepare_time": 500,
+            "change_time": 1000,
+            "cooldown_time": 2000,
             "debug_mode": False,
             "log_to_file": False
         }
@@ -469,6 +733,11 @@ class SettingsWindow(QWidget):
         self.v_pos_slider.setValue(default_values["v_position"])
         self.on_h_pos_changed(default_values["h_position"])
         self.on_v_pos_changed(default_values["v_position"])
+
+        self.prepare_time_spin.setValue(default_values["prepare_time"])
+        self.change_time_spin.setValue(default_values["change_time"])
+        self.cooldown_time_spin.setValue(default_values["cooldown_time"])
+        self._load_gesture_mappings()
 
         self.debug_mode_cb.setChecked(default_values["debug_mode"])
         self.log_to_file_cb.setChecked(default_values["log_to_file"])
