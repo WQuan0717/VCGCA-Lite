@@ -8,8 +8,12 @@ from src.windows.settings_window import SettingsWindow
 from src.windows.hud_window import HUDWindow
 from src.windows.debug_window import DebugWindow
 from src.windows.splash_window import SplashWindow
+from src.windows.log_window import LogWindow
+from src.windows.help_window import HelpWindow
 from src.utils.icon_helper import create_default_icon
 from src.utils.settings_manager import settings_manager
+from src.utils.startup_manager import StartupManager
+from src.utils.logger import log_manager
 from src.core.gesture_service import gesture_service
 
 
@@ -23,6 +27,7 @@ class TrayApplication:
         self.hud_window = None
         self.debug_window = None
         self.splash_window = None
+        self.help_window = None
 
         # HUD 功能启用状态（从设置加载，默认启用）
         self.hud_enabled = settings_manager.get("display", "hud_enabled", True)
@@ -59,6 +64,16 @@ class TrayApplication:
         debug_action = QAction("显示调试窗口", self.app)
         debug_action.triggered.connect(self.show_debug_window)
         menu.addAction(debug_action)
+
+        # 显示日志查看器
+        log_action = QAction("查看日志", self.app)
+        log_action.triggered.connect(self.show_log_window)
+        menu.addAction(log_action)
+
+        # 帮助文档
+        help_action = QAction("帮助文档", self.app)
+        help_action.triggered.connect(self.show_help_window)
+        menu.addAction(help_action)
 
         menu.addSeparator()
 
@@ -116,6 +131,22 @@ class TrayApplication:
         else:
             self.hud_action.setText("启用HUD提示")
 
+    def sync_startup_status(self):
+        """同步开机启动状态（确保注册表和设置文件一致）"""
+        try:
+            # 获取设置中的开机启动状态
+            settings_auto_start = settings_manager.get("general", "auto_start", False)
+
+            # 获取实际注册表中的状态
+            registry_auto_start = StartupManager.is_auto_start_enabled()
+
+            # 如果不一致，以设置文件为准
+            if settings_auto_start != registry_auto_start:
+                print(f"同步开机启动状态: 设置={settings_auto_start}, 注册表={registry_auto_start}")
+                StartupManager.toggle_auto_start(settings_auto_start)
+        except Exception as e:
+            print(f"同步开机启动状态失败: {e}")
+
     def show_debug_window(self):
         if self.debug_window is None:
             self.debug_window = DebugWindow()
@@ -128,6 +159,34 @@ class TrayApplication:
     def on_debug_closed(self):
         self.debug_window = None
 
+    def show_log_window(self):
+        """显示日志查看器"""
+        if not hasattr(self, 'log_window') or self.log_window is None:
+            self.log_window = LogWindow()
+            self.log_window.closed.connect(self.on_log_window_closed)
+            self.log_window.show()
+        else:
+            self.log_window.raise_()
+            self.log_window.activateWindow()
+
+    def on_log_window_closed(self):
+        """日志窗口关闭"""
+        self.log_window = None
+
+    def show_help_window(self):
+        """显示帮助文档窗口"""
+        if not hasattr(self, 'help_window') or self.help_window is None:
+            self.help_window = HelpWindow()
+            self.help_window.closed.connect(self.on_help_window_closed)
+            self.help_window.show()
+        else:
+            self.help_window.raise_()
+            self.help_window.activateWindow()
+
+    def on_help_window_closed(self):
+        """帮助窗口关闭"""
+        self.help_window = None
+
     def on_settings_changed(self, section, key, value):
         """设置变更时立即应用"""
         print(f"设置变更: {section}.{key} = {value}")
@@ -138,6 +197,14 @@ class TrayApplication:
             self.update_hud_menu_text()
             if self.hud_window:
                 self.hud_window.set_enabled(self.hud_enabled)
+
+        # 处理开机启动设置变更
+        if section == "general" and key == "auto_start":
+            success = StartupManager.toggle_auto_start(value)
+            if success:
+                print(f"开机启动已{'启用' if value else '禁用'}")
+            else:
+                print(f"开机启动设置失败")
 
     def quit(self):
         # 停止手势识别服务
@@ -151,11 +218,18 @@ class TrayApplication:
             self.hud_window.close()
         if self.debug_window:
             self.debug_window.close()
+        if hasattr(self, 'log_window') and self.log_window:
+            self.log_window.close()
+        if hasattr(self, 'help_window') and self.help_window:
+            self.help_window.close()
         self.tray_icon.hide()
         self.app.quit()
 
     def show_splash_and_run(self):
         """显示启动动画后开始运行"""
+        # 同步开机启动状态（确保注册表和设置文件一致）
+        self.sync_startup_status()
+
         # 检查是否显示启动动画
         show_splash = settings_manager.get("general", "show_splash", True)
 

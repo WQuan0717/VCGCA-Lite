@@ -2,10 +2,10 @@
 ; 使用 Inno Setup 6 编译
 
 #define MyAppName "VCGCA-Lite"
-#define MyAppVersion "0.3.0"
+#define MyAppVersion "0.4.0"
 #define MyAppPublisher "VCGCA"
 #define MyAppURL "https://github.com/vcgca/vcgca-lite"
-#define MyAppExeName "VCGCA-Lite-v0.3.0.exe"
+#define MyAppExeName "VCGCA-Lite-v0.4.0.exe"
 
 [Setup]
 ; 应用信息
@@ -47,7 +47,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 ; 主程序文件
-Source: "output\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 ; 文档
 Source: "docs\README.md"; DestDir: "{app}\docs"; Flags: ignoreversion

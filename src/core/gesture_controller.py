@@ -18,6 +18,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from src.core.system_control import system_controller
 from src.utils.settings_manager import settings_manager
+from src.utils.logger import log_manager
 
 
 class GestureController(QObject):

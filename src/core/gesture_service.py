@@ -16,6 +16,7 @@ except ImportError as e:
     print(f"警告: MediaPipe导入失败: {e}")
 
 from src.core.gesture_controller import gesture_controller
+from src.utils.logger import log_manager
 
 
 class GestureService(QThread):
