@@ -3,6 +3,7 @@ from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtGui import QColor, QFont, QMouseEvent
 
 from src.utils.settings_manager import settings_manager
+from src.core.gesture_controller import gesture_controller
 
 
 class HUDWindow(QWidget):
@@ -27,9 +28,19 @@ class HUDWindow(QWidget):
         self.dragging = False
         self.drag_position = QPoint()
         
+        # 记录最后执行的动作
+        self.last_action_name = ""
+        
+        # HUD 功能启用状态（从设置加载，默认启用）
+        self.enabled = settings_manager.get("display", "hud_enabled", True)
+        
         self.init_ui()
         self.setup_animation()
         self.apply_settings()
+        
+        # 连接手势控制器信号
+        gesture_controller.state_changed.connect(self.on_state_changed)
+        gesture_controller.action_triggered.connect(self.on_action_triggered)
         
     def init_ui(self):
         # 主布局
@@ -48,26 +59,26 @@ class HUDWindow(QWidget):
         layout.setSpacing(10)
         
         # 标题
-        title_label = QLabel("VCGCA-Lite HUD")
+        title_label = QLabel("VCGCA-Lite")
         title_font = QFont("Microsoft YaHei", 14, QFont.Weight.Bold)
         title_label.setFont(title_font)
         title_label.setStyleSheet("color: #3498db;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
         
-        # 状态信息
-        self.status_label = QLabel("系统运行中...")
-        self.status_label.setFont(QFont("Microsoft YaHei", 10))
-        self.status_label.setStyleSheet("color: #ecf0f1;")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.status_label)
+        # 主显示内容（根据状态变化）
+        self.main_label = QLabel("")
+        self.main_label.setFont(QFont("Microsoft YaHei", 16, QFont.Weight.Bold))
+        self.main_label.setStyleSheet("color: #2ecc71;")  # 默认绿色
+        self.main_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.main_label)
         
-        # 数据展示
-        self.data_label = QLabel("FPS: 60 | 延迟: 16ms")
-        self.data_label.setFont(QFont("Microsoft YaHei", 9))
-        self.data_label.setStyleSheet("color: #95a5a6;")
-        self.data_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.data_label)
+        # 副标题/状态信息
+        self.sub_label = QLabel("等待手势...")
+        self.sub_label.setFont(QFont("Microsoft YaHei", 10))
+        self.sub_label.setStyleSheet("color: #95a5a6;")
+        self.sub_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.sub_label)
         
         # 添加阴影效果
         shadow = QGraphicsDropShadowEffect(self)
@@ -84,21 +95,75 @@ class HUDWindow(QWidget):
         screen = self.screen().geometry()
         self.move(screen.width() - 320, 50)
         
+        # 初始隐藏（等待手势服务启动）
+        self.hide()
+        
     def setup_animation(self):
-        # 模拟数据更新
+        # 状态检查定时器
         self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_data)
-        self.timer.start(1000)  # 每秒更新
+        self.timer.timeout.connect(self.check_state)
+        self.timer.start(100)  # 每100ms检查一次状态
         
-        self.frame_count = 0
+    def set_enabled(self, enabled):
+        """设置 HUD 功能启用状态"""
+        self.enabled = enabled
+        if not enabled and self.isVisible():
+            self.hide()
         
-    def update_data(self):
-        self.frame_count += 1
-        import random
-        fps = random.randint(58, 62)
-        latency = random.randint(14, 18)
-        self.data_label.setText(f"FPS: {fps} | 延迟: {latency}ms")
+    def check_state(self):
+        """检查当前状态，决定是否显示HUD"""
+        # 如果 HUD 功能被禁用，不显示
+        if not self.enabled:
+            if self.isVisible():
+                self.hide()
+            return
+            
+        current_state = gesture_controller.current_state
         
+        # 只在特定状态显示HUD
+        if current_state == gesture_controller.STATE_WAITING_RESPONSE:
+            # 变化等待期 - 显示"就绪"
+            if not self.isVisible():
+                self.show()
+            self.update_display("就绪", "可以做出响应手势", "#2ecc71")
+        elif current_state == gesture_controller.STATE_COOLDOWN:
+            # 冷静期 - 显示最后执行的动作
+            if not self.isVisible():
+                self.show()
+            action_text = self.last_action_name if self.last_action_name else "完成"
+            self.update_display(action_text, "动作已执行", "#f39c12")
+        else:
+            # 其他状态 - 隐藏HUD
+            if self.isVisible():
+                self.hide()
+        
+    def update_display(self, main_text, sub_text, color):
+        """更新显示内容"""
+        self.main_label.setText(main_text)
+        self.main_label.setStyleSheet(f"color: {color};")
+        self.sub_label.setText(sub_text)
+        
+    def on_state_changed(self, state):
+        """状态变化回调"""
+        pass  # 在check_state中统一处理
+        
+    def on_action_triggered(self, prepare, response):
+        """动作触发回调 - 记录动作名称"""
+        # 获取动作名称
+        action_key = gesture_controller._get_action_for_gestures(prepare, response)
+        if action_key:
+            # 获取动作的中文名称
+            action_names = {
+                "screenshot": "截图",
+                "volume_up": "音量+",
+                "volume_down": "音量-",
+                "volume_mute": "静音",
+                "show_desktop": "桌面",
+            }
+            self.last_action_name = action_names.get(action_key, action_key)
+        else:
+            self.last_action_name = "未知动作"
+            
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = True

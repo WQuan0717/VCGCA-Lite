@@ -4,7 +4,7 @@ VCGCA-Lite 版本信息
 
 # 版本号 (遵循语义化版本规范)
 VERSION_MAJOR = 0  # 主版本号：重大更新/不兼容修改
-VERSION_MINOR = 2  # 次版本号：功能更新/向下兼容
+VERSION_MINOR = 3  # 次版本号：功能更新/向下兼容
 VERSION_PATCH = 0  # 修订号：问题修复/向下兼容
 
 # 版本后缀 (可选)

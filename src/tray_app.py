@@ -24,6 +24,9 @@ class TrayApplication:
         self.debug_window = None
         self.splash_window = None
 
+        # HUD 功能启用状态（从设置加载，默认启用）
+        self.hud_enabled = settings_manager.get("display", "hud_enabled", True)
+
         # 创建托盘图标
         self.tray_icon = QSystemTrayIcon()
         self.tray_icon.setIcon(create_default_icon())
@@ -37,39 +40,40 @@ class TrayApplication:
 
         # 连接设置变更信号
         settings_manager.settings_changed.connect(self.on_settings_changed)
-        
+
     def create_tray_menu(self):
         menu = QMenu()
-        
+
         # 显示设置
         settings_action = QAction("显示设置", self.app)
         settings_action.triggered.connect(self.show_settings)
         menu.addAction(settings_action)
-        
-        # 显示/隐藏 HUD
-        self.hud_action = QAction("显示/隐藏HUD", self.app)
-        self.hud_action.triggered.connect(self.toggle_hud)
+
+        # HUD 功能启用/禁用
+        self.hud_action = QAction("", self.app)
+        self.hud_action.triggered.connect(self.toggle_hud_enabled)
+        self.update_hud_menu_text()
         menu.addAction(self.hud_action)
-        
+
         # 显示调试窗口
         debug_action = QAction("显示调试窗口", self.app)
         debug_action.triggered.connect(self.show_debug_window)
         menu.addAction(debug_action)
-        
+
         menu.addSeparator()
-        
+
         # 退出
         exit_action = QAction("退出", self.app)
         exit_action.triggered.connect(self.quit)
         menu.addAction(exit_action)
-        
+
         self.tray_icon.setContextMenu(menu)
-        
+
     def on_tray_activated(self, reason):
-        # 双击托盘图标显示/隐藏HUD
+        # 双击托盘图标显示设置窗口
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
-            self.toggle_hud()
-            
+            self.show_settings()
+
     def show_settings(self):
         if self.settings_window is None:
             self.settings_window = SettingsWindow()
@@ -78,21 +82,40 @@ class TrayApplication:
         else:
             self.settings_window.raise_()
             self.settings_window.activateWindow()
-            
+
     def on_settings_closed(self):
         self.settings_window = None
-        
-    def toggle_hud(self):
-        if self.hud_window is None:
-            self.hud_window = HUDWindow()
-            self.hud_window.show()
+
+    def toggle_hud_enabled(self):
+        """切换 HUD 功能的启用/禁用状态"""
+        self.hud_enabled = not self.hud_enabled
+
+        # 保存到设置
+        settings_manager.set("display", "hud_enabled", self.hud_enabled)
+        settings_manager.save_settings()
+
+        # 更新菜单文本
+        self.update_hud_menu_text()
+
+        if self.hud_enabled:
+            # 启用 HUD，创建窗口（如果不存在）
+            self.create_hud_window()
         else:
-            if self.hud_window.isVisible():
+            # 禁用 HUD，隐藏窗口
+            if self.hud_window and self.hud_window.isVisible():
                 self.hud_window.hide()
-            else:
-                self.hud_window.show()
-                self.hud_window.raise_()
-                
+
+        # 通知 HUD 窗口状态变化
+        if self.hud_window:
+            self.hud_window.set_enabled(self.hud_enabled)
+
+    def update_hud_menu_text(self):
+        """更新 HUD 菜单项的文本"""
+        if self.hud_enabled:
+            self.hud_action.setText("禁用HUD提示")
+        else:
+            self.hud_action.setText("启用HUD提示")
+
     def show_debug_window(self):
         if self.debug_window is None:
             self.debug_window = DebugWindow()
@@ -101,19 +124,21 @@ class TrayApplication:
         else:
             self.debug_window.raise_()
             self.debug_window.activateWindow()
-            
+
     def on_debug_closed(self):
         self.debug_window = None
-        
+
     def on_settings_changed(self, section, key, value):
         """设置变更时立即应用"""
         print(f"设置变更: {section}.{key} = {value}")
-        
-        # 如果HUD窗口已打开，立即应用显示相关设置
-        if self.hud_window and self.hud_window.isVisible():
-            if section == "display":
-                self.hud_window.apply_settings()
-        
+
+        # 同步 HUD 启用状态
+        if section == "display" and key == "hud_enabled":
+            self.hud_enabled = value
+            self.update_hud_menu_text()
+            if self.hud_window:
+                self.hud_window.set_enabled(self.hud_enabled)
+
     def quit(self):
         # 停止手势识别服务
         if gesture_service.isRunning():
@@ -128,7 +153,7 @@ class TrayApplication:
             self.debug_window.close()
         self.tray_icon.hide()
         self.app.quit()
-        
+
     def show_splash_and_run(self):
         """显示启动动画后开始运行"""
         # 检查是否显示启动动画
@@ -161,8 +186,17 @@ class TrayApplication:
             if gesture_service.initialize():
                 gesture_service.start()
                 print("手势识别服务已自动启动")
+                # 创建 HUD 窗口（如果启用了 HUD）
+                if self.hud_enabled:
+                    self.create_hud_window()
             else:
                 print("手势识别服务启动失败")
+
+    def create_hud_window(self):
+        """创建 HUD 窗口"""
+        if self.hud_window is None:
+            self.hud_window = HUDWindow()
+            self.hud_window.set_enabled(self.hud_enabled)
 
     def on_gesture_log(self, message):
         """接收手势识别日志"""

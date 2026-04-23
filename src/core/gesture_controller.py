@@ -327,14 +327,14 @@ class GestureController(QObject):
                 self.log_message.emit("[状态] 冷静期结束 → 空闲")
 
     def get_current_state_display(self):
-        """获取当前状态的显示文本"""
+        """获取当前状态的显示文本（用于OpenCV显示，使用英文避免编码问题）"""
         state_map = {
-            self.STATE_IDLE: "空闲",
-            self.STATE_WAITING_PREPARE: "准备中",
-            self.STATE_WAITING_RESPONSE: "等待响应",
-            self.STATE_COOLDOWN: "冷静期",
+            self.STATE_IDLE: "IDLE",
+            self.STATE_WAITING_PREPARE: "PREPARE",
+            self.STATE_WAITING_RESPONSE: "RESPONSE",
+            self.STATE_COOLDOWN: "COOLDOWN",
         }
-        return state_map.get(self.current_state, "未知")
+        return state_map.get(self.current_state, "UNKNOWN")
 
 
 # 全局手势控制器实例
