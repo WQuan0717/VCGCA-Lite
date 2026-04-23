@@ -41,6 +41,13 @@ class HUDWindow(QWidget):
         # 连接手势控制器信号
         gesture_controller.state_changed.connect(self.on_state_changed)
         gesture_controller.action_triggered.connect(self.on_action_triggered)
+        gesture_controller.screenshot_start.connect(self.on_screenshot_start)
+        gesture_controller.screenshot_end.connect(self.on_screenshot_end)
+
+        # 截图相关状态
+        self.screenshot_in_progress = False
+        self.screenshot_success = False
+        self.screenshot_message = ""
         
     def init_ui(self):
         # 主布局
@@ -112,14 +119,18 @@ class HUDWindow(QWidget):
         
     def check_state(self):
         """检查当前状态，决定是否显示HUD"""
+        # 如果正在截图，不显示 HUD（避免被截入画面）
+        if self.screenshot_in_progress:
+            return
+
         # 如果 HUD 功能被禁用，不显示
         if not self.enabled:
             if self.isVisible():
                 self.hide()
             return
-            
+
         current_state = gesture_controller.current_state
-        
+
         # 只在特定状态显示HUD
         if current_state == gesture_controller.STATE_WAITING_RESPONSE:
             # 变化等待期 - 显示"就绪"
@@ -163,7 +174,85 @@ class HUDWindow(QWidget):
             self.last_action_name = action_names.get(action_key, action_key)
         else:
             self.last_action_name = "未知动作"
-            
+
+    def on_screenshot_start(self):
+        """截图开始 - 立即隐藏 HUD"""
+        self.screenshot_in_progress = True
+        if self.isVisible():
+            self.hide()
+
+    def on_screenshot_end(self, success, message):
+        """截图结束 - 显示截图结果"""
+        self.screenshot_in_progress = False
+        self.screenshot_success = success
+        self.screenshot_message = message
+
+        # 统一显示"截图"，与其他动作保持一致
+        if self.enabled and success:
+            # 截图成功，显示白色闪光效果
+            self.show_flash_effect()
+            # 记录动作名称为"截图"，冷静期会显示
+            self.last_action_name = "截图"
+
+    def show_flash_effect(self):
+        """显示全屏白色闪光效果（类似手机截图）"""
+        from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtCore import QTimer, Qt
+
+        # 创建全屏闪光窗口
+        self.flash_widget = QWidget()
+        self.flash_widget.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.Tool |
+            Qt.WindowType.WindowDoesNotAcceptFocus
+        )
+        # 不设置 WA_TranslucentBackground，让白色背景正常显示
+        self.flash_widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+        # 设置全屏
+        screen = QApplication.primaryScreen().geometry()
+        self.flash_widget.setGeometry(screen)
+
+        # 设置白色背景（使用 palette 确保生效）
+        from PyQt6.QtGui import QPalette
+        palette = self.flash_widget.palette()
+        palette.setColor(QPalette.ColorRole.Window, QColor(255, 255, 255))
+        self.flash_widget.setPalette(palette)
+        self.flash_widget.setAutoFillBackground(True)
+
+        # 显示闪光窗口
+        self.flash_widget.show()
+        self.flash_widget.raise_()
+
+        # 150ms 后开始淡出（让白色显示更久一些）
+        QTimer.singleShot(150, self._fade_flash)
+
+    def _fade_flash(self):
+        """淡出闪光效果"""
+        if hasattr(self, 'flash_widget') and self.flash_widget:
+            # 使用 QTimer 逐步降低透明度（更简单可靠）
+            self.flash_opacity = 1.0
+            self.flash_timer = QTimer(self)
+            self.flash_timer.timeout.connect(self._update_flash_opacity)
+            self.flash_timer.start(20)  # 每 20ms 更新一次
+
+    def _update_flash_opacity(self):
+        """更新闪光透明度"""
+        self.flash_opacity -= 0.05  # 每次降低 5%
+        if self.flash_opacity <= 0:
+            self.flash_timer.stop()
+            self._cleanup_flash()
+        else:
+            # 使用窗口透明度
+            self.flash_widget.setWindowOpacity(self.flash_opacity)
+
+    def _cleanup_flash(self):
+        """清理闪光窗口"""
+        if hasattr(self, 'flash_widget') and self.flash_widget:
+            self.flash_widget.close()
+            self.flash_widget = None
+
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = True

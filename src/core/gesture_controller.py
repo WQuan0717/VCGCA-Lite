@@ -27,6 +27,8 @@ class GestureController(QObject):
     state_changed = pyqtSignal(str)  # 状态变化信号
     action_triggered = pyqtSignal(str, str)  # 动作触发信号 (准备手势, 响应手势)
     log_message = pyqtSignal(str)  # 日志消息
+    screenshot_start = pyqtSignal()  # 截图开始信号（通知HUD隐藏）
+    screenshot_end = pyqtSignal(bool, str)  # 截图结束信号（成功/失败, 消息）
 
     def __init__(self):
         super().__init__()
@@ -242,7 +244,20 @@ class GestureController(QObject):
         action_key = self._get_action_for_gestures(prepare_gesture, response_gesture)
         if action_key:
             self.action_triggered.emit(prepare_gesture, response_gesture)
+
+            # 如果是截图功能，先发射信号让 HUD 隐藏
+            if action_key == "screenshot":
+                self.screenshot_start.emit()
+                # 给 HUD 一点时间隐藏（100ms）
+                import time
+                time.sleep(0.1)
+
             success, message = system_controller.execute_action(action_key)
+
+            # 如果是截图功能，发射结束信号
+            if action_key == "screenshot":
+                self.screenshot_end.emit(success, message)
+
             if success:
                 self.log_message.emit(f"[动作] ✓ {message}")
             else:
