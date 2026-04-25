@@ -25,13 +25,13 @@ class TrayApplication:
 
         # 安装全局错误处理器
         error_handler.install_global_handler()
-        error_handler.critical_error.connect(self.on_critical_error)
 
         # 窗口实例（单例模式）
         self.settings_window = None
         self.hud_window = None
         self.debug_window = None
         self.splash_window = None
+        self.log_window = None
         self.help_window = None
 
         # HUD 功能启用状态（从设置加载，默认启用）
@@ -147,10 +147,10 @@ class TrayApplication:
 
             # 如果不一致，以设置文件为准
             if settings_auto_start != registry_auto_start:
-                print(f"同步开机启动状态: 设置={settings_auto_start}, 注册表={registry_auto_start}")
+                log_manager.info(f"同步开机启动状态: 设置={settings_auto_start}, 注册表={registry_auto_start}")
                 StartupManager.toggle_auto_start(settings_auto_start)
         except Exception as e:
-            print(f"同步开机启动状态失败: {e}")
+            log_manager.error(f"同步开机启动状态失败: {e}")
 
     def show_debug_window(self):
         if self.debug_window is None:
@@ -166,7 +166,7 @@ class TrayApplication:
 
     def show_log_window(self):
         """显示日志查看器"""
-        if not hasattr(self, 'log_window') or self.log_window is None:
+        if self.log_window is None:
             self.log_window = LogWindow()
             self.log_window.closed.connect(self.on_log_window_closed)
             self.log_window.show()
@@ -180,7 +180,7 @@ class TrayApplication:
 
     def show_help_window(self):
         """显示帮助文档窗口"""
-        if not hasattr(self, 'help_window') or self.help_window is None:
+        if self.help_window is None:
             self.help_window = HelpWindow()
             self.help_window.closed.connect(self.on_help_window_closed)
             self.help_window.show()
@@ -194,7 +194,7 @@ class TrayApplication:
 
     def on_settings_changed(self, section, key, value):
         """设置变更时立即应用"""
-        print(f"设置变更: {section}.{key} = {value}")
+        log_manager.info(f"设置变更: {section}.{key} = {value}")
 
         # 同步 HUD 启用状态
         if section == "display" and key == "hud_enabled":
@@ -207,15 +207,15 @@ class TrayApplication:
         if section == "general" and key == "auto_start":
             success = StartupManager.toggle_auto_start(value)
             if success:
-                print(f"开机启动已{'启用' if value else '禁用'}")
+                log_manager.info(f"开机启动已{'启用' if value else '禁用'}")
             else:
-                print(f"开机启动设置失败")
+                log_manager.error(f"开机启动设置失败")
 
     def quit(self):
         # 停止手势识别服务
         if gesture_service.isRunning():
             gesture_service.stop()
-            print("手势识别服务已停止")
+            log_manager.info("手势识别服务已停止")
         # 清理所有窗口
         if self.settings_window:
             self.settings_window.close()
@@ -264,12 +264,12 @@ class TrayApplication:
             # 初始化并启动
             if gesture_service.initialize():
                 gesture_service.start()
-                print("手势识别服务已自动启动")
+                log_manager.info("手势识别服务已自动启动")
                 # 创建 HUD 窗口（如果启用了 HUD）
                 if self.hud_enabled:
                     self.create_hud_window()
             else:
-                print("手势识别服务启动失败")
+                log_manager.error("手势识别服务启动失败")
 
     def create_hud_window(self):
         """创建 HUD 窗口"""
@@ -279,25 +279,16 @@ class TrayApplication:
 
     def on_gesture_log(self, message):
         """接收手势识别日志"""
-        print(f"[Gesture] {message}")
+        log_manager.info(f"[Gesture] {message}")
 
     def on_gesture_detected(self, gesture_name, confidence):
         """处理检测到的手势"""
         # 这里可以添加手势对应的操作
         pass
 
-    def on_critical_error(self, error_type, error_message):
-        """处理严重错误"""
-        log_manager.critical(f"程序遇到严重错误 [{error_type}]: {error_message}")
-        # 尝试恢复
-        if error_handler.attempt_recovery():
-            log_manager.info("错误恢复成功")
-        else:
-            log_manager.error("错误恢复失败，程序可能需要重启")
-
     def run(self):
         if not QSystemTrayIcon.isSystemTrayAvailable():
-            print("系统不支持托盘图标")
+            log_manager.critical("系统不支持托盘图标")
             sys.exit(1)
 
         # 显示启动动画（如果启用）

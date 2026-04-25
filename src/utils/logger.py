@@ -1,161 +1,121 @@
 """
-日志系统
-提供文件日志记录、日志级别控制、日志查看功能
+简化日志系统
+- 单文件存储
+- 保留最近2000条记录
+- 代替print()输出
 """
 
-import os
 import sys
-import logging
-import logging.handlers
-from datetime import datetime
+import os
 from pathlib import Path
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
 class LogManager(QObject):
-    """日志管理器"""
+    """简化日志管理器"""
 
-    # 信号：新日志消息
-    new_log_message = pyqtSignal(str, str)  # level, message
+    # 信号：新日志消息 (level, message)
+    new_log_message = pyqtSignal(str, str)
 
-    # 日志级别映射
-    LEVEL_MAP = {
-        'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARNING': logging.WARNING,
-        'ERROR': logging.ERROR,
-        'CRITICAL': logging.CRITICAL
-    }
+    # 最大保留日志条数
+    MAX_LOG_LINES = 2000
 
     def __init__(self):
         super().__init__()
 
         # 日志目录
-        self.log_dir = Path.home() / '.vcgca-lite' / 'logs'
+        self.log_dir = Path.home() / '.vcgca-lite'
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
-        # 当前日志文件
-        self.current_log_file = self.log_dir / f"vcgca-lite-{datetime.now().strftime('%Y%m%d')}.log"
+        # 单一日志文件
+        self.log_file = self.log_dir / 'app.log'
 
-        # 创建 logger
-        self.logger = logging.getLogger('VCGCA-Lite')
-        self.logger.setLevel(logging.DEBUG)
+        # 内存中的日志缓存
+        self.log_cache = []
 
-        # 清除旧的处理器
-        self.logger.handlers.clear()
+        # 加载已有日志
+        self._load_existing_logs()
 
-        # 文件处理器（按天轮转，保留7天）
-        file_handler = logging.handlers.TimedRotatingFileHandler(
-            self.current_log_file,
-            when='midnight',
-            interval=1,
-            backupCount=7,
-            encoding='utf-8'
-        )
-        file_handler.setLevel(logging.DEBUG)
+        # 记录启动信息
+        self.info("=" * 50)
+        self.info("程序启动")
+        self.info("=" * 50)
 
-        # 控制台处理器
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
+    def _load_existing_logs(self):
+        """加载已有日志文件"""
+        if self.log_file.exists():
+            try:
+                with open(self.log_file, 'r', encoding='utf-8') as f:
+                    self.log_cache = f.readlines()
+                # 限制缓存大小
+                if len(self.log_cache) > self.MAX_LOG_LINES:
+                    self.log_cache = self.log_cache[-self.MAX_LOG_LINES:]
+            except:
+                self.log_cache = []
 
-        # 格式化器
-        formatter = logging.Formatter(
-            '[%(asctime)s] [%(levelname)s] %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-        file_handler.setFormatter(formatter)
-        console_handler.setFormatter(formatter)
+    def _write_log(self, level, message):
+        """写入日志"""
+        import datetime
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        log_line = f"[{timestamp}] [{level}] {message}\n"
 
-        # 添加处理器
-        self.logger.addHandler(file_handler)
-        self.logger.addHandler(console_handler)
+        # 添加到缓存
+        self.log_cache.append(log_line)
 
-        # 自定义处理器，发送信号
-        self.signal_handler = SignalHandler(self)
-        self.signal_handler.setLevel(logging.DEBUG)
-        self.signal_handler.setFormatter(formatter)
-        self.logger.addHandler(self.signal_handler)
+        # 限制缓存大小，删除最早的
+        if len(self.log_cache) > self.MAX_LOG_LINES:
+            self.log_cache = self.log_cache[-self.MAX_LOG_LINES:]
 
-        self.info("日志系统初始化完成")
+        # 写入文件（覆盖写入所有缓存）
+        try:
+            with open(self.log_file, 'w', encoding='utf-8') as f:
+                f.writelines(self.log_cache)
+        except:
+            pass
+
+        # 发射信号
+        self.new_log_message.emit(level, log_line.strip())
+
+        # 同时输出到控制台
+        print(log_line.strip())
 
     def debug(self, message):
-        """记录 DEBUG 级别日志"""
-        self.logger.debug(message)
+        """调试日志"""
+        self._write_log('DEBUG', message)
 
     def info(self, message):
-        """记录 INFO 级别日志"""
-        self.logger.info(message)
+        """信息日志"""
+        self._write_log('INFO', message)
 
     def warning(self, message):
-        """记录 WARNING 级别日志"""
-        self.logger.warning(message)
+        """警告日志"""
+        self._write_log('WARNING', message)
 
     def error(self, message):
-        """记录 ERROR 级别日志"""
-        self.logger.error(message)
+        """错误日志"""
+        self._write_log('ERROR', message)
 
     def critical(self, message):
-        """记录 CRITICAL 级别日志"""
-        self.logger.critical(message)
+        """严重错误日志"""
+        self._write_log('CRITICAL', message)
 
-    def set_level(self, level):
-        """设置日志级别"""
-        if level in self.LEVEL_MAP:
-            self.logger.setLevel(self.LEVEL_MAP[level])
-            self.info(f"日志级别设置为: {level}")
+    def get_all_logs(self):
+        """获取所有日志"""
+        return ''.join(self.log_cache)
 
-    def get_log_files(self):
-        """获取所有日志文件列表"""
-        log_files = []
-        if self.log_dir.exists():
-            for f in sorted(self.log_dir.glob('vcgca-lite-*.log'), reverse=True):
-                log_files.append({
-                    'name': f.name,
-                    'path': str(f),
-                    'size': f.stat().st_size,
-                    'modified': datetime.fromtimestamp(f.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
-                })
-        return log_files
-
-    def read_log_file(self, log_path, lines=100):
-        """读取日志文件内容"""
+    def clear_logs(self):
+        """清空日志"""
+        self.log_cache = []
         try:
-            with open(log_path, 'r', encoding='utf-8') as f:
-                all_lines = f.readlines()
-                return ''.join(all_lines[-lines:])
-        except Exception as e:
-            return f"读取日志文件失败: {e}"
+            if self.log_file.exists():
+                self.log_file.unlink()
+        except:
+            pass
+        self.info("日志已清空")
 
-    def clear_old_logs(self, days=7):
-        """清理旧日志文件"""
-        try:
-            from datetime import timedelta
-            cutoff = datetime.now() - timedelta(days=days)
-
-            count = 0
-            for f in self.log_dir.glob('vcgca-lite-*.log'):
-                if datetime.fromtimestamp(f.stat().st_mtime) < cutoff:
-                    f.unlink()
-                    count += 1
-
-            self.info(f"清理了 {count} 个旧日志文件")
-            return count
-        except Exception as e:
-            self.error(f"清理日志文件失败: {e}")
-            return 0
-
-
-class SignalHandler(logging.Handler):
-    """自定义日志处理器，发送 Qt 信号"""
-
-    def __init__(self, manager):
-        super().__init__()
-        self.manager = manager
-
-    def emit(self, record):
-        """发送日志信号"""
-        msg = self.format(record)
-        self.manager.new_log_message.emit(record.levelname, msg)
+    def get_log_file_path(self):
+        """获取日志文件路径"""
+        return str(self.log_file)
 
 
 # 全局日志管理器实例
