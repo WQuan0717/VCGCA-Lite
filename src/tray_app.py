@@ -14,6 +14,7 @@ from src.utils.icon_helper import create_default_icon
 from src.utils.settings_manager import settings_manager
 from src.utils.startup_manager import StartupManager
 from src.utils.logger import log_manager
+from src.utils.error_handler import error_handler
 from src.core.gesture_service import gesture_service
 
 
@@ -21,6 +22,10 @@ class TrayApplication:
     def __init__(self):
         self.app = QApplication(sys.argv)
         self.app.setQuitOnLastWindowClosed(False)
+
+        # 安装全局错误处理器
+        error_handler.install_global_handler()
+        error_handler.critical_error.connect(self.on_critical_error)
 
         # 窗口实例（单例模式）
         self.settings_window = None
@@ -280,6 +285,15 @@ class TrayApplication:
         """处理检测到的手势"""
         # 这里可以添加手势对应的操作
         pass
+
+    def on_critical_error(self, error_type, error_message):
+        """处理严重错误"""
+        log_manager.critical(f"程序遇到严重错误 [{error_type}]: {error_message}")
+        # 尝试恢复
+        if error_handler.attempt_recovery():
+            log_manager.info("错误恢复成功")
+        else:
+            log_manager.error("错误恢复失败，程序可能需要重启")
 
     def run(self):
         if not QSystemTrayIcon.isSystemTrayAvailable():

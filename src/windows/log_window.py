@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QTextEdit, QComboBox, QPushButton, QLabel,
     QTableWidget, QTableWidgetItem, QSplitter, QGroupBox
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QTextCharFormat, QFont
 
 from src.utils.logger import log_manager
@@ -15,6 +15,7 @@ from src.utils.logger import log_manager
 
 class LogWindow(QMainWindow):
     """日志查看器窗口"""
+    closed = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -225,4 +226,5 @@ class LogWindow(QMainWindow):
     def closeEvent(self, event):
         """关闭事件"""
         self.refresh_timer.stop()
+        self.closed.emit()
         event.accept()
