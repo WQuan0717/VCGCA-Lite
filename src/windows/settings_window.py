@@ -39,6 +39,7 @@ class SettingsWindow(QWidget):
         tabs.addTab(self.create_display_tab(), "显示")
         tabs.addTab(self.create_gesture_tab(), "手势控制")
         tabs.addTab(self.create_advanced_tab(), "高级")
+        tabs.addTab(self.create_help_tab(), "帮助")
         tabs.addTab(self.create_about_tab(), "关于")
 
         layout.addWidget(tabs)
@@ -472,6 +473,149 @@ class SettingsWindow(QWidget):
 
         layout.addWidget(debug_group)
         layout.addStretch()
+
+        tab.setLayout(layout)
+        return tab
+
+    def create_help_tab(self):
+        """创建帮助标签页"""
+        tab = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(10, 10, 10, 10)
+
+        # 创建帮助内容浏览器
+        help_browser = QTextBrowser()
+        help_browser.setOpenExternalLinks(True)
+        help_browser.setHtml("""
+        <html>
+        <head>
+            <style>
+                body { font-family: 'Microsoft YaHei', sans-serif; line-height: 1.8; color: #333; font-size: 13px; }
+                h2 { color: #2196F3; border-bottom: 2px solid #2196F3; padding-bottom: 8px; font-size: 16px; }
+                h3 { color: #333; margin-top: 15px; font-size: 14px; }
+                .section { background: #f8f9fa; padding: 12px; margin: 10px 0; border-radius: 6px; border-left: 3px solid #2196F3; }
+                .gesture { background: #fff3e0; padding: 8px; margin: 5px 0; border-radius: 4px; }
+                .tip { background: #e8f5e9; padding: 10px; margin: 10px 0; border-left: 3px solid #4CAF50; border-radius: 4px; }
+                ul { margin: 8px 0; padding-left: 20px; }
+                li { margin: 4px 0; }
+                code { background: #f5f5f5; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+            </style>
+        </head>
+        <body>
+            <h2>📚 使用指南</h2>
+
+            <div class="section">
+                <h3>启动程序</h3>
+                <p>双击 VCGCA-Lite.exe 启动，程序会在系统托盘显示图标。</p>
+            </div>
+
+            <div class="section">
+                <h3>基本使用流程</h3>
+                <ol>
+                    <li>确保摄像头正常工作</li>
+                    <li>在摄像头前做出特定手势（详见下方手势说明）</li>
+                    <li>保持手势稳定约1-2秒</li>
+                    <li>看到屏幕闪光表示截图成功</li>
+                    <li>截图保存在设置中指定的目录</li>
+                </ol>
+            </div>
+
+            <div class="section">
+                <h3>系统托盘菜单</h3>
+                <p>右键点击托盘图标可以：</p>
+                <ul>
+                    <li><strong>显示设置</strong> - 打开此设置窗口</li>
+                    <li><strong>启用/禁用HUD</strong> - 切换屏幕提示</li>
+                    <li><strong>显示调试窗口</strong> - 查看摄像头画面</li>
+                    <li><strong>查看日志</strong> - 打开日志查看器</li>
+                    <li><strong>退出</strong> - 关闭程序</li>
+                </ul>
+            </div>
+
+            <h2>👋 手势说明</h2>
+            <p>所有手势都需要保持 <strong>1-2 秒</strong> 才能触发。</p>
+
+            <div class="gesture">
+                <strong>✌️ 剪刀手</strong> - 伸出食指和中指形成"V"字
+            </div>
+            <div class="gesture">
+                <strong>👍 点赞</strong> - 竖起大拇指，其他四指握拳
+            </div>
+            <div class="gesture">
+                <strong>👎 点踩</strong> - 大拇指向下，其他四指握拳
+            </div>
+            <div class="gesture">
+                <strong>☝️ 食指指天</strong> - 食指向上伸直，其他手指握拳
+            </div>
+            <div class="gesture">
+                <strong>✊ 握拳</strong> - 五指全部弯曲握拳
+            </div>
+            <div class="gesture">
+                <strong>🖐️ 张开手掌</strong> - 五指伸直张开
+            </div>
+
+            <div class="tip">
+                <strong>💡 提示</strong><br>
+                确保光线充足，手势距离摄像头 30-100 厘米最佳。
+            </div>
+
+            <h2>⚙️ 设置说明</h2>
+
+            <div class="section">
+                <h3>常规设置</h3>
+                <ul>
+                    <li><strong>开机自动启动</strong> - Windows 启动时自动运行</li>
+                    <li><strong>显示启动动画</strong> - 启动时显示欢迎画面</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h3>显示设置</h3>
+                <ul>
+                    <li><strong>透明度/宽度/高度</strong> - HUD 窗口外观</li>
+                    <li><strong>水平/垂直位置</strong> - HUD 窗口位置</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h3>手势控制设置</h3>
+                <ul>
+                    <li><strong>准备时间</strong> - 手势保持时间，防止误触发</li>
+                    <li><strong>变化时间</strong> - 手势变化检测时间</li>
+                    <li><strong>冷静时间</strong> - 两次截图之间的间隔</li>
+                    <li><strong>手势映射</strong> - 配置手势与控制功能的对应关系</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h3>高级设置</h3>
+                <ul>
+                    <li><strong>启用调试模式</strong> - 显示更多调试信息</li>
+                    <li><strong>记录日志到文件</strong> - 启用文件日志记录</li>
+                </ul>
+            </div>
+
+            <h2>❓ 常见问题</h2>
+
+            <div class="section">
+                <p><strong>Q: 程序无法启动？</strong></p>
+                <p>A: 请检查摄像头驱动，或尝试以管理员身份运行。</p>
+            </div>
+
+            <div class="section">
+                <p><strong>Q: 手势无法识别？</strong></p>
+                <p>A: 确保光线充足，手势清晰可见。可在调试窗口查看识别状态。</p>
+            </div>
+
+            <div class="section">
+                <p><strong>Q: 截图保存在哪里？</strong></p>
+                <p>A: 默认保存在用户目录下的 Pictures\Screenshots 文件夹中。</p>
+            </div>
+        </body>
+        </html>
+        """)
+
+        layout.addWidget(help_browser)
 
         tab.setLayout(layout)
         return tab

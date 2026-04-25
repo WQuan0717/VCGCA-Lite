@@ -9,7 +9,6 @@ from src.windows.hud_window import HUDWindow
 from src.windows.debug_window import DebugWindow
 from src.windows.splash_window import SplashWindow
 from src.windows.log_window import LogWindow
-from src.windows.help_window import HelpWindow
 from src.utils.icon_helper import create_default_icon
 from src.utils.settings_manager import settings_manager
 from src.utils.startup_manager import StartupManager
@@ -32,7 +31,6 @@ class TrayApplication:
         self.debug_window = None
         self.splash_window = None
         self.log_window = None
-        self.help_window = None
 
         # HUD 功能启用状态（从设置加载，默认启用）
         self.hud_enabled = settings_manager.get("display", "hud_enabled", True)
@@ -74,11 +72,6 @@ class TrayApplication:
         log_action = QAction("查看日志", self.app)
         log_action.triggered.connect(self.show_log_window)
         menu.addAction(log_action)
-
-        # 帮助文档
-        help_action = QAction("帮助文档", self.app)
-        help_action.triggered.connect(self.show_help_window)
-        menu.addAction(help_action)
 
         menu.addSeparator()
 
@@ -178,20 +171,6 @@ class TrayApplication:
         """日志窗口关闭"""
         self.log_window = None
 
-    def show_help_window(self):
-        """显示帮助文档窗口"""
-        if self.help_window is None:
-            self.help_window = HelpWindow()
-            self.help_window.closed.connect(self.on_help_window_closed)
-            self.help_window.show()
-        else:
-            self.help_window.raise_()
-            self.help_window.activateWindow()
-
-    def on_help_window_closed(self):
-        """帮助窗口关闭"""
-        self.help_window = None
-
     def on_settings_changed(self, section, key, value):
         """设置变更时立即应用"""
         log_manager.info(f"设置变更: {section}.{key} = {value}")
@@ -223,10 +202,8 @@ class TrayApplication:
             self.hud_window.close()
         if self.debug_window:
             self.debug_window.close()
-        if hasattr(self, 'log_window') and self.log_window:
+        if self.log_window:
             self.log_window.close()
-        if hasattr(self, 'help_window') and self.help_window:
-            self.help_window.close()
         self.tray_icon.hide()
         self.app.quit()
 
