@@ -4,18 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -42,16 +30,19 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Project specific
-*.bak
+# Project build outputs
 *.log
 output/
 build_onedir/
 installer_output/
+build/
+dist/
+
+# Inno Setup
 *.exe
 ChineseSimplified.isl
 
-# Build scripts (keep only one)
+# Legacy build scripts (replaced by onedir versions)
 build_exe.py
 build_installer.py
 installer.iss

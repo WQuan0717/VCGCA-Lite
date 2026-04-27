@@ -165,6 +165,21 @@ python build_installer_onedir.py
 
 输出文件：`installer_output/VCGCA-Lite-Setup-v{version}.exe`
 
+### 构建输出目录说明
+
+运行构建脚本后会生成以下三个目录，各自用途如下：
+
+| 目录 | 用途 | 说明 |
+|------|------|------|
+| `build_onedir/` | PyInstaller 临时工作目录 | 存放构建过程中的临时文件和缓存，**可以删除** |
+| `output/onedir/VCGCA-Lite/` | 应用程序目录 | 包含完整的可执行程序和所有依赖，**可直接运行**或用于重新打包 |
+| `installer_output/` | 安装包输出目录 | 包含最终生成的 `VCGCA-Lite-Setup-v{version}.exe` 安装程序，**用于分发** |
+
+**清理建议**：
+- 如果只需要最终安装包，可以删除 `build_onedir/` 和 `output/` 目录
+- 如需重新打包安装程序但不需要重新构建 EXE，保留 `output/onedir/VCGCA-Lite/` 即可
+- `installer_output/` 中的 `.exe` 文件是最终交付物，建议备份
+
 ## 技术栈
 
 - **计算机视觉**: OpenCV, MediaPipe

@@ -45,12 +45,8 @@ Name: "chinesesimplified"; MessagesFile: "ChineseSimplified.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; onedir 模式：复制整个文件夹
+; onedir 模式：复制整个应用程序文件夹
 Source: "output\onedir\VCGCA-Lite\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-
-; 文档
-Source: "docs\README.md"; DestDir: "{app}\docs"; Flags: ignoreversion
-Source: "docs\CHANGELOG.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 
 [Icons]
 ; 开始菜单快捷方式
