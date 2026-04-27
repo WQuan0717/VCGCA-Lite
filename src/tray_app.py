@@ -242,7 +242,7 @@ class TrayApplication:
             if self.splash_window:
                 self.splash_window.set_progress(progress, message)
         
-        # 使用定时器让UI有机会更新
+        # 在主线程中执行初始化（UI操作必须在主线程）
         def do_initialize():
             success = gesture_service.initialize(progress_callback)
             if success:
@@ -262,19 +262,8 @@ class TrayApplication:
                 # 延迟后关闭启动动画
                 QTimer.singleShot(2000, self.splash_window.skip if self.splash_window else lambda: None)
         
-        # 在另一个线程中执行初始化，避免阻塞UI
-        from PyQt6.QtCore import QThreadPool, QRunnable
-        
-        class InitTask(QRunnable):
-            def __init__(self, callback):
-                super().__init__()
-                self.callback = callback
-            
-            def run(self):
-                self.callback()
-        
-        task = InitTask(do_initialize)
-        QThreadPool.globalInstance().start(task)
+        # 使用QTimer延迟执行，让启动动画先显示
+        QTimer.singleShot(100, do_initialize)
 
     def on_init_progress(self, progress, message):
         """接收初始化进度"""
