@@ -38,7 +38,6 @@ class SettingsWindow(QWidget):
         tabs.addTab(self.create_general_tab(), "常规")
         tabs.addTab(self.create_display_tab(), "显示")
         tabs.addTab(self.create_gesture_tab(), "手势控制")
-        tabs.addTab(self.create_advanced_tab(), "高级")
         tabs.addTab(self.create_help_tab(), "帮助")
         tabs.addTab(self.create_about_tab(), "关于")
 
@@ -456,27 +455,6 @@ class SettingsWindow(QWidget):
             self.gesture_mapping_table.removeRow(current_row)
             self.on_value_changed()
 
-    def create_advanced_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout()
-
-        # 调试设置
-        debug_group = QGroupBox("调试设置")
-        debug_layout = QVBoxLayout()
-
-        self.debug_mode_cb = QCheckBox("启用调试模式")
-        self.log_to_file_cb = QCheckBox("记录日志到文件")
-
-        debug_layout.addWidget(self.debug_mode_cb)
-        debug_layout.addWidget(self.log_to_file_cb)
-        debug_group.setLayout(debug_layout)
-
-        layout.addWidget(debug_group)
-        layout.addStretch()
-
-        tab.setLayout(layout)
-        return tab
-
     def create_help_tab(self):
         """创建帮助标签页"""
         tab = QWidget()
@@ -587,14 +565,6 @@ class SettingsWindow(QWidget):
                 </ul>
             </div>
 
-            <div class="section">
-                <h3>高级设置</h3>
-                <ul>
-                    <li><strong>启用调试模式</strong> - 显示更多调试信息</li>
-                    <li><strong>记录日志到文件</strong> - 启用文件日志记录</li>
-                </ul>
-            </div>
-
             <h2>❓ 常见问题</h2>
 
             <div class="section">
@@ -700,10 +670,6 @@ class SettingsWindow(QWidget):
         self.change_time_spin.valueChanged.connect(self.on_value_changed)
         self.cooldown_time_spin.valueChanged.connect(self.on_value_changed)
 
-        # 高级设置
-        self.debug_mode_cb.stateChanged.connect(self.on_value_changed)
-        self.log_to_file_cb.stateChanged.connect(self.on_value_changed)
-
     def on_value_changed(self):
         """当任何值改变时调用"""
         self._is_modified = True
@@ -748,11 +714,6 @@ class SettingsWindow(QWidget):
         # 加载手势映射
         self._load_gesture_mappings_from_settings(gesture.get("mappings", []))
 
-        # 高级设置
-        advanced = settings_manager.get_section("advanced")
-        self.debug_mode_cb.setChecked(advanced.get("debug_mode", False))
-        self.log_to_file_cb.setChecked(advanced.get("log_to_file", False))
-
         # 保存原始值
         self._save_original_values()
 
@@ -775,9 +736,7 @@ class SettingsWindow(QWidget):
             "prepare_time": self.prepare_time_spin.value(),
             "change_time": self.change_time_spin.value(),
             "cooldown_time": self.cooldown_time_spin.value(),
-            "gesture_mappings": self._get_gesture_mappings_from_table(),
-            "debug_mode": self.debug_mode_cb.isChecked(),
-            "log_to_file": self.log_to_file_cb.isChecked()
+            "gesture_mappings": self._get_gesture_mappings_from_table()
         }
 
     def save_settings(self):
@@ -798,10 +757,6 @@ class SettingsWindow(QWidget):
         settings_manager.set("gesture", "change_time", self.change_time_spin.value())
         settings_manager.set("gesture", "cooldown_time", self.cooldown_time_spin.value())
         settings_manager.set("gesture", "mappings", self._get_gesture_mappings_from_table())
-
-        # 高级设置
-        settings_manager.set("advanced", "debug_mode", self.debug_mode_cb.isChecked())
-        settings_manager.set("advanced", "log_to_file", self.log_to_file_cb.isChecked())
 
         # 保存到文件
         if settings_manager.save_settings():
@@ -839,9 +794,6 @@ class SettingsWindow(QWidget):
         self.cooldown_time_spin.setValue(self._original_values.get("cooldown_time", 2000))
         self._load_gesture_mappings_from_settings(self._original_values.get("gesture_mappings", []))
 
-        self.debug_mode_cb.setChecked(self._original_values.get("debug_mode", False))
-        self.log_to_file_cb.setChecked(self._original_values.get("log_to_file", False))
-
         # 重置状态
         self._is_modified = False
         self.save_btn.setEnabled(False)
@@ -861,9 +813,7 @@ class SettingsWindow(QWidget):
             "v_position": 0,    # 顶部
             "prepare_time": 500,
             "change_time": 1000,
-            "cooldown_time": 2000,
-            "debug_mode": False,
-            "log_to_file": False
+            "cooldown_time": 2000
         }
 
         # 应用默认设置到UI
@@ -882,9 +832,6 @@ class SettingsWindow(QWidget):
         self.change_time_spin.setValue(default_values["change_time"])
         self.cooldown_time_spin.setValue(default_values["cooldown_time"])
         self._load_gesture_mappings()
-
-        self.debug_mode_cb.setChecked(default_values["debug_mode"])
-        self.log_to_file_cb.setChecked(default_values["log_to_file"])
 
         # 标记为已修改，需要保存
         self._is_modified = True
