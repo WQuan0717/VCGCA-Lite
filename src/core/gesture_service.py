@@ -25,6 +25,7 @@ class GestureService(QThread):
     log_message = pyqtSignal(str)
     gesture_detected = pyqtSignal(str, float)  # 手势名称, 置信度
     control_state_changed = pyqtSignal(str)  # 控制状态变化
+    init_progress = pyqtSignal(int, str)  # 进度百分比, 状态消息
 
     _instance = None
     _initialized = False
@@ -77,17 +78,33 @@ class GestureService(QThread):
         """接收动作触发信号"""
         self.log_message.emit(f"✓ 手势组合触发: {prepare} → {response}")
 
-    def initialize(self):
-        """初始化手势识别器"""
+    def initialize(self, progress_callback=None):
+        """初始化手势识别器
+        
+        Args:
+            progress_callback: 进度回调函数，接收(进度百分比, 状态消息)
+        """
         if not MEDIAPIPE_AVAILABLE:
             self.log_message.emit("MediaPipe不可用")
+            if progress_callback:
+                progress_callback(0, "MediaPipe不可用")
             return False
 
         try:
-            # 下载模型文件（如果不存在）
-            model_path = self._get_model_path()
+            # 步骤1: 检查模型文件 (10%)
+            if progress_callback:
+                progress_callback(10, "检查模型文件...")
+            self.init_progress.emit(10, "检查模型文件...")
+            
+            model_path = self._get_model_path(progress_callback)
+            if not model_path:
+                return False
 
-            # 创建Gesture Recognizer
+            # 步骤2: 创建Gesture Recognizer (60%)
+            if progress_callback:
+                progress_callback(60, "加载手势识别模型...")
+            self.init_progress.emit(60, "加载手势识别模型...")
+            
             base_options = BaseOptions(model_asset_path=model_path)
             options = vision.GestureRecognizerOptions(
                 base_options=base_options,
@@ -95,14 +112,23 @@ class GestureService(QThread):
                 num_hands=2
             )
             self.recognizer = vision.GestureRecognizer.create_from_options(options)
+            
+            # 步骤3: 初始化完成 (80%)
+            if progress_callback:
+                progress_callback(80, "手势识别器初始化成功")
+            self.init_progress.emit(80, "手势识别器初始化成功")
+            
             self.log_message.emit("MediaPipe Gesture Recognizer初始化成功")
             return True
         except Exception as e:
             self.init_error = f"MediaPipe初始化失败: {e}"
             self.log_message.emit(self.init_error)
+            if progress_callback:
+                progress_callback(0, f"初始化失败: {e}")
+            self.init_progress.emit(0, f"初始化失败: {e}")
             return False
 
-    def _get_model_path(self):
+    def _get_model_path(self, progress_callback=None):
         """获取或下载模型文件路径"""
         model_dir = os.path.join(os.path.expanduser("~"), ".vcgca-lite", "models")
         os.makedirs(model_dir, exist_ok=True)
@@ -110,18 +136,41 @@ class GestureService(QThread):
         model_path = os.path.join(model_dir, "gesture_recognizer.task")
 
         if not os.path.exists(model_path):
+            if progress_callback:
+                progress_callback(20, "下载MediaPipe手势识别模型...")
+            self.init_progress.emit(20, "下载MediaPipe手势识别模型...")
             self.log_message.emit("正在下载MediaPipe手势识别模型...")
-            self._download_model(model_path)
+            
+            try:
+                self._download_model(model_path, progress_callback)
+            except Exception as e:
+                self.init_error = f"模型下载失败: {e}"
+                self.log_message.emit(self.init_error)
+                if progress_callback:
+                    progress_callback(0, f"模型下载失败: {e}")
+                self.init_progress.emit(0, f"模型下载失败: {e}")
+                return None
 
         return model_path
 
-    def _download_model(self, model_path):
+    def _download_model(self, model_path, progress_callback=None):
         """下载模型文件"""
         import urllib.request
         model_url = "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task"
 
         try:
-            urllib.request.urlretrieve(model_url, model_path)
+            # 使用自定义下载器显示进度
+            def download_progress(block_num, block_size, total_size):
+                if total_size > 0:
+                    downloaded = block_num * block_size
+                    percent = min(int(downloaded * 100 / total_size), 100)
+                    # 下载进度映射到 20-50%
+                    mapped_progress = 20 + int(percent * 0.3)
+                    if progress_callback:
+                        progress_callback(mapped_progress, f"下载模型... {percent}%")
+                    self.init_progress.emit(mapped_progress, f"下载模型... {percent}%")
+
+            urllib.request.urlretrieve(model_url, model_path, reporthook=download_progress)
             self.log_message.emit(f"模型下载完成: {model_path}")
         except Exception as e:
             raise Exception(f"模型下载失败: {e}")

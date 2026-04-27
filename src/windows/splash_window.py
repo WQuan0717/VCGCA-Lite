@@ -6,6 +6,7 @@ from src.utils.version import get_version_string
 
 
 class SplashWindow(QWidget):
+    """启动动画窗口 - 支持真实进度显示"""
     finished = pyqtSignal()
     
     def __init__(self):
@@ -25,6 +26,11 @@ class SplashWindow(QWidget):
         
         self.init_ui()
         self.setup_animations()
+        
+        # 初始化状态
+        self.current_progress = 0
+        self.target_progress = 0
+        self.is_closing = False
         
     def init_ui(self):
         # 主容器
@@ -111,10 +117,6 @@ class SplashWindow(QWidget):
         )
         
     def setup_animations(self):
-        # 进度值
-        self.current_progress = 0
-        self.target_progress = 0
-        
         # 淡入动画
         self.opacity_animation = QPropertyAnimation(self, b"windowOpacity")
         self.opacity_animation.setDuration(500)
@@ -130,43 +132,47 @@ class SplashWindow(QWidget):
         self.fade_out_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
         self.fade_out_animation.finished.connect(self.on_fade_out_finished)
         
-        # 进度更新定时器
+        # 进度平滑更新定时器
         self.progress_timer = QTimer(self)
-        self.progress_timer.timeout.connect(self.update_progress)
-        
-        # 状态文字更新
-        self.status_messages = [
-            (0, "正在初始化..."),
-            (20, "正在加载配置..."),
-            (40, "正在初始化组件..."),
-            (60, "正在准备界面..."),
-            (80, "即将完成..."),
-            (100, "启动完成")
-        ]
+        self.progress_timer.timeout.connect(self.update_progress_display)
         
     def start(self):
         """开始显示启动动画"""
         self.show()
         self.opacity_animation.start()
-        self.progress_timer.start(30)  # 每30ms更新一次
+        self.progress_timer.start(50)  # 每50ms更新一次显示
         
-    def update_progress(self):
-        """更新进度"""
-        if self.current_progress < 100:
-            self.current_progress += 1
-            self.progress_bar.setValue(self.current_progress)
+    def set_progress(self, progress, message=None):
+        """设置目标进度和消息
+        
+        Args:
+            progress: 进度百分比 (0-100)
+            message: 状态消息
+        """
+        self.target_progress = min(max(progress, 0), 100)
+        if message:
+            self.status_label.setText(message)
             
-            # 更新状态文字
-            for progress, message in self.status_messages:
-                if self.current_progress >= progress:
-                    self.status_label.setText(message)
-        else:
-            # 进度完成，开始淡出
-            self.progress_timer.stop()
+        # 如果进度达到100%，延迟后自动关闭
+        if self.target_progress >= 100 and not self.is_closing:
+            self.is_closing = True
             QTimer.singleShot(500, self.start_fade_out)
+        
+    def update_progress_display(self):
+        """平滑更新进度条显示"""
+        # 平滑过渡到目标进度
+        if self.current_progress < self.target_progress:
+            diff = self.target_progress - self.current_progress
+            step = max(1, diff // 5)  # 每次移动1/5的差距，至少移动1
+            self.current_progress += step
+            self.progress_bar.setValue(self.current_progress)
+        elif self.current_progress > self.target_progress:
+            self.current_progress = self.target_progress
+            self.progress_bar.setValue(self.current_progress)
             
     def start_fade_out(self):
         """开始淡出"""
+        self.progress_timer.stop()
         self.fade_out_animation.start()
         
     def on_fade_out_finished(self):

@@ -2,7 +2,7 @@ import sys
 import os
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QWidget
 from PyQt6.QtGui import QIcon, QAction
-from PyQt6.QtCore import Qt, QThread
+from PyQt6.QtCore import Qt, QThread, QTimer
 
 from src.windows.settings_window import SettingsWindow
 from src.windows.hud_window import HUDWindow
@@ -220,20 +220,74 @@ class TrayApplication:
             self.splash_window = SplashWindow()
             self.splash_window.finished.connect(self.on_splash_finished)
             self.splash_window.start()
+            # 在动画显示的同时初始化服务
+            QTimer.singleShot(500, self.initialize_with_progress)
         else:
             # 直接显示托盘图标并启动手势识别
             self.tray_icon.show()
             self.start_gesture_service()
 
+    def initialize_with_progress(self):
+        """带进度显示的初始化"""
+        if not self.splash_window:
+            return
+            
+        # 连接进度信号
+        gesture_service.init_progress.connect(self.on_init_progress)
+        gesture_service.log_message.connect(self.on_gesture_log)
+        gesture_service.gesture_detected.connect(self.on_gesture_detected)
+        
+        # 开始初始化（带进度回调）
+        def progress_callback(progress, message):
+            if self.splash_window:
+                self.splash_window.set_progress(progress, message)
+        
+        # 使用定时器让UI有机会更新
+        def do_initialize():
+            success = gesture_service.initialize(progress_callback)
+            if success:
+                # 初始化成功，继续启动服务
+                gesture_service.start()
+                if self.splash_window:
+                    self.splash_window.set_progress(100, "启动完成")
+                log_manager.info("手势识别服务已自动启动")
+                # 创建 HUD 窗口（如果启用了 HUD）
+                if self.hud_enabled:
+                    self.create_hud_window()
+            else:
+                # 初始化失败
+                if self.splash_window:
+                    self.splash_window.set_progress(0, "初始化失败")
+                log_manager.error("手势识别服务启动失败")
+                # 延迟后关闭启动动画
+                QTimer.singleShot(2000, self.splash_window.skip if self.splash_window else lambda: None)
+        
+        # 在另一个线程中执行初始化，避免阻塞UI
+        from PyQt6.QtCore import QThreadPool, QRunnable
+        
+        class InitTask(QRunnable):
+            def __init__(self, callback):
+                super().__init__()
+                self.callback = callback
+            
+            def run(self):
+                self.callback()
+        
+        task = InitTask(do_initialize)
+        QThreadPool.globalInstance().start(task)
+
+    def on_init_progress(self, progress, message):
+        """接收初始化进度"""
+        if self.splash_window:
+            self.splash_window.set_progress(progress, message)
+
     def on_splash_finished(self):
         """启动动画完成后"""
         self.splash_window = None
         self.tray_icon.show()
-        # 自动启动手势识别服务
-        self.start_gesture_service()
 
     def start_gesture_service(self):
-        """启动手势识别服务"""
+        """启动手势识别服务（无动画版本）"""
         if not gesture_service.isRunning():
             # 连接日志信号到控制台输出
             gesture_service.log_message.connect(self.on_gesture_log)
