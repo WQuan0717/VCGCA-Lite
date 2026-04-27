@@ -78,6 +78,16 @@ class GestureService(QThread):
         """接收动作触发信号"""
         self.log_message.emit(f"✓ 手势组合触发: {prepare} → {response}")
 
+    def reload_settings(self):
+        """重新加载设置（用于设置变更后实时应用）"""
+        try:
+            gesture_controller.reload_settings()
+            self.log_message.emit("[配置] 手势设置已重新加载")
+            return True
+        except Exception as e:
+            self.log_message.emit(f"[配置] 重新加载设置失败: {e}")
+            return False
+
     def initialize(self, progress_callback=None):
         """初始化手势识别器
         

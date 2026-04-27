@@ -190,6 +190,15 @@ class TrayApplication:
             else:
                 log_manager.error(f"开机启动设置失败")
 
+        # 处理手势设置变更（准备时间、变化时间、冷静时间、手势映射）
+        if section == "gesture":
+            if gesture_service.isRunning():
+                # 手势服务正在运行，实时重新加载设置
+                gesture_service.reload_settings()
+            else:
+                # 手势服务未运行，记录日志
+                log_manager.info("手势设置已变更，将在服务启动时应用")
+
     def quit(self):
         # 停止手势识别服务
         if gesture_service.isRunning():
