@@ -306,8 +306,13 @@ class GestureService(QThread):
                             self._draw_landmarks(frame, recognition_result.hand_landmarks[idx])
 
             else:
-                # 没有检测到手势时清空缓存
+                # 没有检测到手（手离开画面），发送None作为丢失目标信号
                 if self.last_gestures:
+                    # 通知控制器手已离开
+                    if self.control_enabled:
+                        for hand_key in list(self.last_gestures.keys()):
+                            gesture_controller.on_gesture_detected("None", int(hand_key.split("_")[1]))
+                    self.log_message.emit("手势识别: None (丢失目标)")
                     self.last_gestures.clear()
 
         except Exception as e:
