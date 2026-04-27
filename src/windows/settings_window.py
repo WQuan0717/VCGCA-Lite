@@ -1,8 +1,9 @@
+from pathlib import Path
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QLineEdit, QCheckBox, QGroupBox,
                              QSpinBox, QComboBox, QTabWidget, QSlider, QGridLayout,
                              QTextBrowser, QTableWidget, QTableWidgetItem, QHeaderView,
-                             QAbstractItemView, QDialog)
+                             QAbstractItemView, QDialog, QFileDialog)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont
 
@@ -90,6 +91,43 @@ class SettingsWindow(QWidget):
         startup_group.setLayout(startup_layout)
 
         layout.addWidget(startup_group)
+
+        # 截图设置
+        screenshot_group = QGroupBox("截图设置")
+        screenshot_layout = QVBoxLayout()
+
+        # 截图保存路径
+        path_layout = QHBoxLayout()
+        path_layout.addWidget(QLabel("保存路径:"))
+        self.screenshot_path_edit = QLineEdit()
+        self.screenshot_path_edit.setReadOnly(True)
+        self.screenshot_path_edit.setPlaceholderText("默认: Pictures\\VCGCA-Screenshots")
+        path_layout.addWidget(self.screenshot_path_edit)
+
+        self.browse_path_btn = QPushButton("浏览...")
+        self.browse_path_btn.clicked.connect(self.browse_screenshot_path)
+        path_layout.addWidget(self.browse_path_btn)
+
+        self.reset_path_btn = QPushButton("恢复默认")
+        self.reset_path_btn.clicked.connect(self.reset_screenshot_path)
+        path_layout.addWidget(self.reset_path_btn)
+
+        screenshot_layout.addLayout(path_layout)
+
+        self.copy_to_clipboard_cb = QCheckBox("截图后复制到剪贴板")
+        self.copy_to_clipboard_cb.setChecked(False)
+        self.copy_to_clipboard_cb.setToolTip("截图成功后自动将图片复制到剪贴板")
+        screenshot_layout.addWidget(self.copy_to_clipboard_cb)
+
+        # 托盘菜单设置
+        self.show_open_folder_cb = QCheckBox("在托盘菜单显示'打开截图文件夹'")
+        self.show_open_folder_cb.setChecked(True)
+        self.show_open_folder_cb.setToolTip("在任务栏图标右键菜单中显示打开截图文件夹的选项")
+        screenshot_layout.addWidget(self.show_open_folder_cb)
+
+        screenshot_group.setLayout(screenshot_layout)
+
+        layout.addWidget(screenshot_group)
         layout.addStretch()
 
         tab.setLayout(layout)
@@ -201,6 +239,35 @@ class SettingsWindow(QWidget):
 
         tab.setLayout(layout)
         return tab
+
+    def browse_screenshot_path(self):
+        """浏览选择截图保存路径"""
+        current_path = self.screenshot_path_edit.text()
+        if not current_path:
+            current_path = str(Path.home() / "Pictures" / "VCGCA-Screenshots")
+
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            "选择截图保存文件夹",
+            current_path,
+            QFileDialog.Option.ShowDirsOnly
+        )
+
+        if folder:
+            self.screenshot_path_edit.setText(folder)
+            self.on_value_changed()
+
+    def reset_screenshot_path(self):
+        """恢复默认截图保存路径"""
+        self.screenshot_path_edit.clear()
+        self.on_value_changed()
+
+    def get_screenshot_path(self):
+        """获取截图保存路径（自定义或默认）"""
+        custom_path = self.screenshot_path_edit.text()
+        if custom_path:
+            return custom_path
+        return str(Path.home() / "Pictures" / "VCGCA-Screenshots")
 
     def on_h_pos_changed(self, value):
         """水平位置变化"""
@@ -544,6 +611,7 @@ class SettingsWindow(QWidget):
                 <ul>
                     <li><strong>开机自动启动</strong> - Windows 启动时自动运行</li>
                     <li><strong>显示启动动画</strong> - 启动时显示欢迎画面</li>
+                    <li><strong>截图后复制到剪贴板</strong> - 截图成功后自动复制到剪贴板</li>
                 </ul>
             </div>
 
@@ -659,6 +727,8 @@ class SettingsWindow(QWidget):
         # 常规设置
         self.auto_start_cb.stateChanged.connect(self.on_value_changed)
         self.show_splash_cb.stateChanged.connect(self.on_value_changed)
+        self.copy_to_clipboard_cb.stateChanged.connect(self.on_value_changed)
+        self.show_open_folder_cb.stateChanged.connect(self.on_value_changed)
 
         # 显示设置
         self.opacity_spin.valueChanged.connect(self.on_value_changed)
@@ -690,6 +760,9 @@ class SettingsWindow(QWidget):
         general = settings_manager.get_section("general")
         self.auto_start_cb.setChecked(general.get("auto_start", False))
         self.show_splash_cb.setChecked(general.get("show_splash", True))
+        self.copy_to_clipboard_cb.setChecked(general.get("copy_to_clipboard", False))
+        self.screenshot_path_edit.setText(general.get("screenshot_path", ""))
+        self.show_open_folder_cb.setChecked(general.get("show_open_folder", True))
 
         # 显示设置
         display = settings_manager.get_section("display")
@@ -728,6 +801,9 @@ class SettingsWindow(QWidget):
         self._original_values = {
             "auto_start": self.auto_start_cb.isChecked(),
             "show_splash": self.show_splash_cb.isChecked(),
+            "copy_to_clipboard": self.copy_to_clipboard_cb.isChecked(),
+            "screenshot_path": self.screenshot_path_edit.text(),
+            "show_open_folder": self.show_open_folder_cb.isChecked(),
             "opacity": self.opacity_spin.value(),
             "width": self.width_spin.value(),
             "height": self.height_spin.value(),
@@ -744,6 +820,9 @@ class SettingsWindow(QWidget):
         # 常规设置
         settings_manager.set("general", "auto_start", self.auto_start_cb.isChecked())
         settings_manager.set("general", "show_splash", self.show_splash_cb.isChecked())
+        settings_manager.set("general", "copy_to_clipboard", self.copy_to_clipboard_cb.isChecked())
+        settings_manager.set("general", "screenshot_path", self.screenshot_path_edit.text())
+        settings_manager.set("general", "show_open_folder", self.show_open_folder_cb.isChecked())
 
         # 显示设置
         settings_manager.set("display", "opacity", self.opacity_spin.value())
@@ -778,6 +857,9 @@ class SettingsWindow(QWidget):
         # 恢复原始值
         self.auto_start_cb.setChecked(self._original_values.get("auto_start", False))
         self.show_splash_cb.setChecked(self._original_values.get("show_splash", True))
+        self.copy_to_clipboard_cb.setChecked(self._original_values.get("copy_to_clipboard", False))
+        self.screenshot_path_edit.setText(self._original_values.get("screenshot_path", ""))
+        self.show_open_folder_cb.setChecked(self._original_values.get("show_open_folder", True))
         self.opacity_spin.setValue(self._original_values.get("opacity", 80))
         self.width_spin.setValue(self._original_values.get("width", 300))
         self.height_spin.setValue(self._original_values.get("height", 150))

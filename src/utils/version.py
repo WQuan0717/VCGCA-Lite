@@ -3,8 +3,8 @@ VCGCA-Lite 版本信息
 """
 
 # 版本号 (遵循语义化版本规范)
-VERSION_MAJOR = 0  # 主版本号：重大更新/不兼容修改
-VERSION_MINOR = 5  # 次版本号：功能更新/向下兼容
+VERSION_MAJOR = 1  # 主版本号：重大更新/不兼容修改
+VERSION_MINOR = 0  # 次版本号：功能更新/向下兼容
 VERSION_PATCH = 0  # 修订号：问题修复/向下兼容
 
 # 版本后缀 (可选)
@@ -16,7 +16,7 @@ VERSION = f"{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}{VERSION_SUFFIX}"
 # 应用信息
 APP_NAME = "VCGCA-Lite"
 APP_DISPLAY_NAME = "VCGCA-Lite"
-APP_DESCRIPTION = "系统工具"
+APP_DESCRIPTION = "视觉手势控制系统 - 基于 MediaPipe 的手势识别与控制"
 
 # 版权信息
 COPYRIGHT = "Copyright © 2026"
@@ -32,7 +32,7 @@ BUILD_DATE = "2026-04-27"
 LICENSE = "MIT License"
 
 # 项目链接
-PROJECT_URL = "https://github.com/vcgca/vcgca-lite"
+PROJECT_URL = "https://github.com/WQuan0717/VCGCA"
 
 
 def get_version_string():

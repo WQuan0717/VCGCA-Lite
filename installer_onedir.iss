@@ -2,7 +2,7 @@
 ; 使用 Inno Setup 6 编译
 
 #define MyAppName "VCGCA-Lite"
-#define MyAppVersion "0.3.1"
+#define MyAppVersion "1.0.0"
 #define MyAppPublisher "VCGCA"
 #define MyAppURL "https://github.com/vcgca/vcgca-lite"
 #define MyAppExeName "VCGCA-Lite.exe"
@@ -39,7 +39,7 @@ VersionInfoDescription={#MyAppName} 安装程序
 VersionInfoCopyright=Copyright (C) 2026 {#MyAppPublisher}
 
 [Languages]
-Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "chinesesimplified"; MessagesFile: "ChineseSimplified.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked

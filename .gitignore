@@ -46,3 +46,12 @@ Thumbs.db
 *.bak
 *.log
 output/
+build_onedir/
+installer_output/
+*.exe
+ChineseSimplified.isl
+
+# Build scripts (keep only one)
+build_exe.py
+build_installer.py
+installer.iss

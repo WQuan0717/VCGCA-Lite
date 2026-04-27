@@ -252,8 +252,13 @@ class GestureController(QObject):
                 # 给 HUD 一点时间隐藏（100ms）
                 import time
                 time.sleep(0.1)
-
-            success, message = system_controller.execute_action(action_key)
+                
+                # 读取设置：是否复制到剪贴板
+                from src.utils.settings_manager import settings_manager
+                copy_to_clipboard = settings_manager.get("general", "copy_to_clipboard", False)
+                success, message = system_controller.execute_action(action_key, copy_to_clipboard=copy_to_clipboard)
+            else:
+                success, message = system_controller.execute_action(action_key)
 
             # 如果是截图功能，发射结束信号
             if action_key == "screenshot":

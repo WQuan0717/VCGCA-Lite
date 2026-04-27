@@ -15,6 +15,7 @@ from src.utils.startup_manager import StartupManager
 from src.utils.logger import log_manager
 from src.utils.error_handler import error_handler
 from src.core.gesture_service import gesture_service
+from src.core.system_control import system_controller
 
 
 class TrayApplication:
@@ -73,6 +74,12 @@ class TrayApplication:
         log_action.triggered.connect(self.show_log_window)
         menu.addAction(log_action)
 
+        # 打开截图文件夹（根据设置显示/隐藏）
+        self.open_folder_action = QAction("打开截图文件夹", self.app)
+        self.open_folder_action.triggered.connect(self.open_screenshot_folder)
+        menu.addAction(self.open_folder_action)
+        self.update_open_folder_visibility()
+
         menu.addSeparator()
 
         # 退出
@@ -81,6 +88,22 @@ class TrayApplication:
         menu.addAction(exit_action)
 
         self.tray_icon.setContextMenu(menu)
+
+    def update_open_folder_visibility(self):
+        """根据设置更新'打开截图文件夹'菜单的可见性"""
+        show_open_folder = settings_manager.get("general", "show_open_folder", True)
+        self.open_folder_action.setVisible(show_open_folder)
+
+    def open_screenshot_folder(self):
+        """打开截图保存文件夹"""
+        try:
+            import os
+            folder_path = system_controller.get_screenshot_dir()
+            # 使用 os.startfile 打开文件夹（更可靠）
+            os.startfile(folder_path)
+            log_manager.info(f"已打开截图文件夹: {folder_path}")
+        except Exception as e:
+            log_manager.error(f"打开截图文件夹失败: {e}")
 
     def on_tray_activated(self, reason):
         # 双击托盘图标显示设置窗口
@@ -189,6 +212,11 @@ class TrayApplication:
                 log_manager.info(f"开机启动已{'启用' if value else '禁用'}")
             else:
                 log_manager.error(f"开机启动设置失败")
+
+        # 处理"打开截图文件夹"菜单显示设置变更
+        if section == "general" and key == "show_open_folder":
+            self.update_open_folder_visibility()
+            log_manager.info(f"'打开截图文件夹'菜单已{'显示' if value else '隐藏'}")
 
         # 处理手势设置变更（准备时间、变化时间、冷静时间、手势映射）
         if section == "gesture":
