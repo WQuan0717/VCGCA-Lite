@@ -152,7 +152,11 @@ class GestureController(QObject):
                 self.log_message.emit(f"[状态] 准备等待 → 变化等待 | 准备手势: {self.prepare_gesture} 已确认")
                 # 立即处理当前手势作为响应手势
                 self._process_response_gesture(gesture_name, current_time)
-            elif gesture_name != self.prepare_gesture and gesture_name != "None":
+            elif gesture_name == "None":
+                # 准备时间未达到，但手势丢失（None），重置到空闲
+                self.log_message.emit(f"[准备] 手势丢失，准备中断，重新检测")
+                self._reset_to_idle("")
+            elif gesture_name != self.prepare_gesture:
                 # 准备时间未达到，且手势变成其他非None手势，重置
                 self.log_message.emit(f"[准备] 手势变化 {self.prepare_gesture} → {gesture_name}，重新检测")
                 self._reset_to_idle("")
@@ -163,7 +167,7 @@ class GestureController(QObject):
                     self.state_start_time = current_time
                     self.state_changed.emit("waiting_prepare")
                     self.log_message.emit(f"[状态] 空闲 → 准备等待 | 手势: {gesture_name} | 需保持 {self.prepare_time}s")
-            # 如果是None或保持原手势，继续等待（不输出日志避免刷屏）
+            # 如果保持原手势，继续等待（不输出日志避免刷屏）
 
         # 变化等待期：等待响应手势
         elif self.current_state == self.STATE_WAITING_RESPONSE:
