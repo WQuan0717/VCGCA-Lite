@@ -45,7 +45,7 @@
 
 ### 正式版安装包
 
-从 [Releases](https://github.com/WQuan0717/VCGCA/releases) 页面下载最新版本：
+从 [Releases](https://github.com/WQuan0717/VCGCA-Lite/releases) 页面下载最新版本：
 
 - `VCGCA-Lite-Setup-v1.0.0.exe` - Windows 安装程序
 
