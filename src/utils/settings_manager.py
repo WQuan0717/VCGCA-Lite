@@ -26,14 +26,21 @@ class SettingsManager(QObject):
         self._defaults = {
             "general": {
                 "auto_start": False,
-                "show_splash": True
+                "show_splash": True,
+                "copy_to_clipboard": False,
+                "screenshot_path": "",
+                "show_open_folder": True
             },
             "display": {
                 "opacity": 80,
-                "position": "右上"
+                "width": 300,
+                "height": 150,
+                "h_position": 100,
+                "v_position": 0,
+                "hud_enabled": True
             },
             "gesture": {
-                "prepare_time": 500,
+                "prepare_time": 1000,
                 "change_time": 1000,
                 "cooldown_time": 2000,
                 "mappings": [

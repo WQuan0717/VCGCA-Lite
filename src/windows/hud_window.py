@@ -11,9 +11,6 @@ class HUDWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("VCGCA-Lite HUD")
-        self.setMinimumSize(300, 150)
-        self.setMaximumSize(400, 200)
-        self.setWindowIcon(get_application_icon())
         
         # 无边框、置顶、工具窗口
         self.setWindowFlags(
@@ -36,6 +33,11 @@ class HUDWindow(QWidget):
         # HUD 功能启用状态（从设置加载，默认启用）
         self.enabled = settings_manager.get("display", "hud_enabled", True)
         
+        # 当前设置值
+        self.current_opacity = 80
+        self.current_width = 300
+        self.current_height = 150
+        
         self.init_ui()
         self.setup_animation()
         self.apply_settings()
@@ -45,6 +47,9 @@ class HUDWindow(QWidget):
         gesture_controller.action_triggered.connect(self.on_action_triggered)
         gesture_controller.screenshot_start.connect(self.on_screenshot_start)
         gesture_controller.screenshot_end.connect(self.on_screenshot_end)
+        
+        # 连接设置变更信号
+        settings_manager.settings_changed.connect(self.on_settings_changed)
 
         # 截图相关状态
         self.screenshot_in_progress = False
@@ -55,13 +60,7 @@ class HUDWindow(QWidget):
         # 主布局
         self.container = QWidget(self)
         self.container.setObjectName("container")
-        self.container.setStyleSheet("""
-            #container {
-                background-color: rgba(30, 30, 30, 200);
-                border-radius: 15px;
-                border: 2px solid rgba(52, 152, 219, 180);
-            }
-        """)
+        self.update_container_style()
         
         layout = QVBoxLayout(self.container)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -96,16 +95,58 @@ class HUDWindow(QWidget):
         shadow.setOffset(0, 4)
         self.container.setGraphicsEffect(shadow)
         
-        # 设置容器大小
-        self.container.setGeometry(10, 10, 280, 130)
-        self.setFixedSize(300, 150)
-        
-        # 默认位置：屏幕右上角
-        screen = self.screen().geometry()
-        self.move(screen.width() - 320, 50)
-        
         # 初始隐藏（等待手势服务启动）
         self.hide()
+        
+    def update_container_style(self):
+        """更新容器样式（透明度）"""
+        alpha = int(255 * self.current_opacity / 100)
+        self.container.setStyleSheet(f"""
+            #container {{
+                background-color: rgba(30, 30, 30, {alpha});
+                border-radius: 15px;
+                border: 2px solid rgba(52, 152, 219, 180);
+            }}
+        """)
+        
+    def update_window_geometry(self):
+        """更新窗口大小和位置"""
+        # 设置窗口大小
+        self.setFixedSize(self.current_width, self.current_height)
+        
+        # 计算容器大小（留出边距）
+        container_width = self.current_width - 20
+        container_height = self.current_height - 20
+        self.container.setGeometry(10, 10, container_width, container_height)
+        
+        # 计算位置
+        screen = self.screen().geometry()
+        h_position = settings_manager.get("display", "h_position", 100)
+        v_position = settings_manager.get("display", "v_position", 0)
+        
+        # 水平位置：0=最左，50=居中，100=最右
+        if h_position == 0:
+            x = 20
+        elif h_position == 50:
+            x = (screen.width() - self.current_width) // 2
+        elif h_position == 100:
+            x = screen.width() - self.current_width - 20
+        else:
+            # 按比例计算
+            x = int((screen.width() - self.current_width) * h_position / 100)
+        
+        # 垂直位置：0=顶部，50=居中，100=底部
+        if v_position == 0:
+            y = 50
+        elif v_position == 50:
+            y = (screen.height() - self.current_height) // 2
+        elif v_position == 100:
+            y = screen.height() - self.current_height - 50
+        else:
+            # 按比例计算
+            y = int((screen.height() - self.current_height) * v_position / 100)
+        
+        self.move(x, y)
         
     def setup_animation(self):
         # 状态检查定时器
@@ -118,6 +159,34 @@ class HUDWindow(QWidget):
         self.enabled = enabled
         if not enabled and self.isVisible():
             self.hide()
+        
+    def apply_settings(self):
+        """应用设置到HUD"""
+        # 读取设置
+        self.current_opacity = settings_manager.get("display", "opacity", 80)
+        self.current_width = settings_manager.get("display", "width", 300)
+        self.current_height = settings_manager.get("display", "height", 150)
+        
+        # 应用样式和几何
+        self.update_container_style()
+        self.update_window_geometry()
+        
+    def on_settings_changed(self, section, key, value):
+        """设置变更时实时应用"""
+        if section == "display":
+            if key == "opacity":
+                self.current_opacity = value
+                self.update_container_style()
+            elif key == "width":
+                self.current_width = value
+                self.update_window_geometry()
+            elif key == "height":
+                self.current_height = value
+                self.update_window_geometry()
+            elif key in ("h_position", "v_position"):
+                self.update_window_geometry()
+            elif key == "hud_enabled":
+                self.set_enabled(value)
         
     def check_state(self):
         """检查当前状态，决定是否显示HUD"""
@@ -198,9 +267,10 @@ class HUDWindow(QWidget):
 
     def show_flash_effect(self):
         """显示全屏白色闪光效果（类似手机截图）"""
-        from PyQt6.QtWidgets import QApplication
-        from PyQt6.QtCore import QTimer, Qt
-
+        from PyQt6.QtWidgets import QApplication, QWidget
+        from PyQt6.QtCore import Qt, QTimer
+        from PyQt6.QtGui import QPalette, QColor
+        
         # 创建全屏闪光窗口
         self.flash_widget = QWidget()
         self.flash_widget.setWindowFlags(
@@ -211,110 +281,65 @@ class HUDWindow(QWidget):
         )
         # 不设置 WA_TranslucentBackground，让白色背景正常显示
         self.flash_widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-
+        
         # 设置全屏
         screen = QApplication.primaryScreen().geometry()
         self.flash_widget.setGeometry(screen)
-
+        
         # 设置白色背景（使用 palette 确保生效）
-        from PyQt6.QtGui import QPalette
         palette = self.flash_widget.palette()
         palette.setColor(QPalette.ColorRole.Window, QColor(255, 255, 255))
         self.flash_widget.setPalette(palette)
         self.flash_widget.setAutoFillBackground(True)
-
+        
         # 显示闪光窗口
         self.flash_widget.show()
         self.flash_widget.raise_()
-
-        # 150ms 后开始淡出（让白色显示更久一些）
+        
+        # 150ms 后开始淡出
         QTimer.singleShot(150, self._fade_flash)
-
+    
     def _fade_flash(self):
         """淡出闪光效果"""
         if hasattr(self, 'flash_widget') and self.flash_widget:
-            # 使用 QTimer 逐步降低透明度（更简单可靠）
+            # 使用 QTimer 逐步降低透明度
             self.flash_opacity = 1.0
             self.flash_timer = QTimer(self)
             self.flash_timer.timeout.connect(self._update_flash_opacity)
             self.flash_timer.start(20)  # 每 20ms 更新一次
-
+    
     def _update_flash_opacity(self):
         """更新闪光透明度"""
-        self.flash_opacity -= 0.05  # 每次降低 5%
+        self.flash_opacity -= 0.1  # 每次降低 10%
         if self.flash_opacity <= 0:
             self.flash_timer.stop()
             self._cleanup_flash()
         else:
             # 使用窗口透明度
             self.flash_widget.setWindowOpacity(self.flash_opacity)
-
+    
     def _cleanup_flash(self):
         """清理闪光窗口"""
         if hasattr(self, 'flash_widget') and self.flash_widget:
             self.flash_widget.close()
+            self.flash_widget.deleteLater()
             self.flash_widget = None
 
     def mousePressEvent(self, event: QMouseEvent):
+        """鼠标按下事件 - 开始拖动"""
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = True
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             event.accept()
-            
+
     def mouseMoveEvent(self, event: QMouseEvent):
+        """鼠标移动事件 - 拖动窗口"""
         if self.dragging and event.buttons() == Qt.MouseButton.LeftButton:
             self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
-            
+
     def mouseReleaseEvent(self, event: QMouseEvent):
+        """鼠标释放事件 - 结束拖动"""
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = False
             event.accept()
-            
-    def mouseDoubleClickEvent(self, event: QMouseEvent):
-        # 双击隐藏
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.hide()
-            event.accept()
-    
-    def apply_settings(self):
-        """应用设置到HUD窗口"""
-        # 获取显示设置
-        opacity = settings_manager.get("display", "opacity", 80)
-        width = settings_manager.get("display", "width", 300)
-        height = settings_manager.get("display", "height", 150)
-        h_position = settings_manager.get("display", "h_position", 100)  # 0-100
-        v_position = settings_manager.get("display", "v_position", 0)    # 0-100
-
-        # 应用透明度
-        opacity_value = int(255 * (opacity / 100))
-        self.container.setStyleSheet(f"""
-            #container {{
-                background-color: rgba(30, 30, 30, {opacity_value});
-                border-radius: 15px;
-                border: 2px solid rgba(52, 152, 219, 180);
-            }}
-        """)
-
-        # 应用尺寸
-        container_width = width - 20  # 减去边距
-        container_height = height - 20
-        self.container.setGeometry(10, 10, container_width, container_height)
-        self.setFixedSize(width, height)
-
-        # 应用位置（使用百分比计算）
-        screen = self.screen().geometry()
-
-        # 水平位置：0% = 最左，50% = 居中，100% = 最右
-        if h_position == 50:
-            x = (screen.width() - width) // 2
-        else:
-            x = int((screen.width() - width) * h_position / 100)
-
-        # 垂直位置：0% = 最上，50% = 居中，100% = 最下
-        if v_position == 50:
-            y = (screen.height() - height) // 2
-        else:
-            y = int((screen.height() - height) * v_position / 100)
-
-        self.move(x, y)

@@ -782,7 +782,7 @@ class SettingsWindow(QWidget):
 
         # 手势控制设置
         gesture = settings_manager.get_section("gesture")
-        self.prepare_time_spin.setValue(gesture.get("prepare_time", 500))
+        self.prepare_time_spin.setValue(gesture.get("prepare_time", 1000))
         self.change_time_spin.setValue(gesture.get("change_time", 1000))
         self.cooldown_time_spin.setValue(gesture.get("cooldown_time", 2000))
 
@@ -895,7 +895,7 @@ class SettingsWindow(QWidget):
             "height": 150,
             "h_position": 100,  # 右侧
             "v_position": 0,    # 顶部
-            "prepare_time": 500,
+            "prepare_time": 1000,
             "change_time": 1000,
             "cooldown_time": 2000
         }
