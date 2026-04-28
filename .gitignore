@@ -46,4 +46,3 @@ dist/
 build_exe.py
 build_installer.py
 installer.iss
-*ChineseSimplified.isl
