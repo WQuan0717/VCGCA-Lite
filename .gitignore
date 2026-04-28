@@ -40,7 +40,7 @@ dist/
 
 # Inno Setup
 *.exe
-ChineseSimplified.isl
+*ChineseSimplified.isl
 
 # Legacy build scripts (replaced by onedir versions)
 build_exe.py
