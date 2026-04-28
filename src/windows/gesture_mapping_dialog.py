@@ -7,6 +7,7 @@ from src.utils.gesture_names import (
     get_gesture_display_name, get_gesture_english_name,
     get_all_gesture_display_names
 )
+from src.utils.icon_helper import get_application_icon
 
 
 class GestureMappingDialog(QDialog):
@@ -16,6 +17,7 @@ class GestureMappingDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("编辑手势映射" if prepare_gesture else "添加手势映射")
         self.setMinimumSize(350, 200)
+        self.setWindowIcon(get_application_icon())
 
         # 保存初始值（用于判断是添加还是编辑）
         self._initial_prepare = prepare_gesture

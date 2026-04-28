@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayo
 from PyQt6.QtGui import QImage, QPixmap, QIcon
 
 from src.core.gesture_service import gesture_service
+from src.utils.icon_helper import get_application_icon
 
 
 class DebugWindow(QWidget):
@@ -14,7 +15,7 @@ class DebugWindow(QWidget):
         super().__init__()
         self.setWindowTitle("VCGCA-Lite 调试窗口 - 视频预览")
         self.setMinimumSize(700, 650)
-        self.setWindowIcon(QIcon())
+        self.setWindowIcon(get_application_icon())
 
         self.init_ui()
         self.connect_to_service()

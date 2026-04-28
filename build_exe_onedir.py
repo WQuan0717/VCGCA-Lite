@@ -38,8 +38,12 @@ args = [
     '--noconfirm',                      # 覆盖输出目录
     '--clean',                          # 清理临时文件
 
+    # 应用程序图标
+    f'--icon={os.path.join(project_root, "assets", "app.ico")}',
+
     # 添加数据文件
     f'--add-data={os.path.join(project_root, "src")};src',
+    f'--add-data={os.path.join(project_root, "assets")};assets',
 
     # 隐藏导入 - 项目模块
     '--hidden-import=src.tray_app',

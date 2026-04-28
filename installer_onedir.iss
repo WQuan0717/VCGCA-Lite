@@ -38,6 +38,10 @@ VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription={#MyAppName} 安装程序
 VersionInfoCopyright=Copyright (C) 2026 {#MyAppPublisher}
 
+; 图标设置
+SetupIconFile=assets\app.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
+
 [Languages]
 Name: "chinesesimplified"; MessagesFile: "ChineseSimplified.isl"
 
@@ -87,7 +91,10 @@ begin
     // 询问是否删除用户配置
     if MsgBox('是否删除用户配置文件和设置？', mbConfirmation, MB_YESNO) = IDYES then
     begin
+      // 删除 %APPDATA%\VCGCA-Lite
       DelTree(ExpandConstant('{userappdata}\VCGCA-Lite'), True, True, True);
+      // 删除用户主目录下的 .vcgca-lite 文件夹
+      DelTree(ExpandConstant('{userprofile}\.vcgca-lite'), True, True, True);
     end;
   end;
 end;

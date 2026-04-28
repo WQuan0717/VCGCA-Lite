@@ -13,6 +13,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QTextCharFormat, QFont
 
 from src.utils.logger import log_manager
+from src.utils.icon_helper import get_application_icon
 
 
 class LogWindow(QMainWindow):
@@ -23,6 +24,7 @@ class LogWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("日志查看器 - VCGCA-Lite")
         self.setMinimumSize(800, 500)
+        self.setWindowIcon(get_application_icon())
 
         # 暂停刷新标志
         self.pause_refresh = False

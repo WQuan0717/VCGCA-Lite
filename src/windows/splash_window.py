@@ -3,6 +3,7 @@ from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, pyqtSigna
 from PyQt6.QtGui import QColor, QFont, QPainter, QBrush, QLinearGradient
 
 from src.utils.version import get_version_string
+from src.utils.icon_helper import get_application_icon
 
 
 class SplashWindow(QWidget):
@@ -13,6 +14,7 @@ class SplashWindow(QWidget):
         super().__init__()
         self.setWindowTitle("VCGCA-Lite")
         self.setFixedSize(400, 250)
+        self.setWindowIcon(get_application_icon())
         
         # 无边框、置顶、工具窗口
         self.setWindowFlags(

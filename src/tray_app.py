@@ -9,7 +9,7 @@ from src.windows.hud_window import HUDWindow
 from src.windows.debug_window import DebugWindow
 from src.windows.splash_window import SplashWindow
 from src.windows.log_window import LogWindow
-from src.utils.icon_helper import create_default_icon
+from src.utils.icon_helper import get_application_icon
 from src.utils.settings_manager import settings_manager
 from src.utils.startup_manager import StartupManager
 from src.utils.logger import log_manager
@@ -38,7 +38,7 @@ class TrayApplication:
 
         # 创建托盘图标
         self.tray_icon = QSystemTrayIcon()
-        self.tray_icon.setIcon(create_default_icon())
+        self.tray_icon.setIcon(get_application_icon())
         self.tray_icon.setToolTip("VCGCA-Lite")
 
         # 创建托盘菜单

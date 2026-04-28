@@ -4,6 +4,7 @@ from PyQt6.QtGui import QColor, QFont, QMouseEvent
 
 from src.utils.settings_manager import settings_manager
 from src.core.gesture_controller import gesture_controller
+from src.utils.icon_helper import get_application_icon
 
 
 class HUDWindow(QWidget):
@@ -12,6 +13,7 @@ class HUDWindow(QWidget):
         self.setWindowTitle("VCGCA-Lite HUD")
         self.setMinimumSize(300, 150)
         self.setMaximumSize(400, 200)
+        self.setWindowIcon(get_application_icon())
         
         # 无边框、置顶、工具窗口
         self.setWindowFlags(

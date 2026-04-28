@@ -9,6 +9,7 @@ from PyQt6.QtGui import QIcon, QFont
 
 from src.utils.settings_manager import settings_manager
 from src.utils.version import get_version_string, get_full_version_info, APP_NAME, APP_DESCRIPTION
+from src.utils.icon_helper import get_application_icon
 from src.windows.gesture_mapping_dialog import GestureMappingDialog
 from src.core.system_control import SystemController
 from src.utils.gesture_names import get_gesture_display_name, get_gesture_english_name
@@ -21,7 +22,7 @@ class SettingsWindow(QWidget):
         super().__init__()
         self.setWindowTitle("VCGCA-Lite 设置")
         self.setMinimumSize(500, 400)
-        self.setWindowIcon(QIcon())  # 可以设置一个图标
+        self.setWindowIcon(get_application_icon())
 
         # 存储原始设置值，用于检测变更
         self._original_values = {}
@@ -558,10 +559,10 @@ class SettingsWindow(QWidget):
                 <h3>基本使用流程</h3>
                 <ol>
                     <li>确保摄像头正常工作</li>
-                    <li>在摄像头前做出特定手势（详见下方手势说明）</li>
-                    <li>保持手势稳定约1-2秒</li>
-                    <li>看到屏幕闪光表示截图成功</li>
-                    <li>截图保存在设置中指定的目录</li>
+                    <li>在摄像头前做出准备手势（详见下方手势说明）</li>
+                    <li>保持手势稳定约1秒，HUD显示"就绪"</li>
+                    <li>快速切换到响应手势</li>
+                    <li>成功触发映射时，HUD显示触发的"动作名"</li>
                 </ol>
             </div>
 
@@ -570,15 +571,16 @@ class SettingsWindow(QWidget):
                 <p>右键点击托盘图标可以：</p>
                 <ul>
                     <li><strong>显示设置</strong> - 打开此设置窗口</li>
-                    <li><strong>启用/禁用HUD</strong> - 切换屏幕提示</li>
+                    <li><strong>启用/禁用HUD提示</strong> - 切换屏幕提示</li>
                     <li><strong>显示调试窗口</strong> - 查看摄像头画面</li>
                     <li><strong>查看日志</strong> - 打开日志查看器</li>
+                    <li><strong>打开截图文件夹</strong> - 可在设置中显示或隐藏该功能</li>
                     <li><strong>退出</strong> - 关闭程序</li>
                 </ul>
             </div>
 
             <h2>👋 手势说明</h2>
-            <p>所有手势都需要保持 <strong>1-2 秒</strong> 才能触发。</p>
+            <p>所有手势都需要保持<strong>准备时间</strong>默认0.8秒才能触发。</p>
 
             <div class="gesture">
                 <strong>✌️ 剪刀手</strong> - 伸出食指和中指形成"V"字
@@ -601,7 +603,7 @@ class SettingsWindow(QWidget):
 
             <div class="tip">
                 <strong>💡 提示</strong><br>
-                确保光线充足，手势距离摄像头 30-100 厘米最佳。
+                确保光线充足，手势距离摄像头 30-80 厘米最佳。
             </div>
 
             <h2>⚙️ 设置说明</h2>
@@ -628,7 +630,7 @@ class SettingsWindow(QWidget):
                 <ul>
                     <li><strong>准备时间</strong> - 手势保持时间，防止误触发</li>
                     <li><strong>变化时间</strong> - 手势变化检测时间</li>
-                    <li><strong>冷静时间</strong> - 两次截图之间的间隔</li>
+                    <li><strong>冷静时间</strong> - 两次成功控制之间的间隔</li>
                     <li><strong>手势映射</strong> - 配置手势与控制功能的对应关系</li>
                 </ul>
             </div>
