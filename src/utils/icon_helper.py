@@ -14,7 +14,13 @@ def get_icon_path():
         # 开发环境
         base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
-    return os.path.join(base_path, 'assets', 'app.ico')
+    # 优先使用 PNG，如果不存在则使用 ICO
+    png_path = os.path.join(base_path, 'assets', 'app.png')
+    ico_path = os.path.join(base_path, 'assets', 'app.ico')
+    
+    if os.path.exists(png_path):
+        return png_path
+    return ico_path
 
 
 def create_default_icon(size=64):

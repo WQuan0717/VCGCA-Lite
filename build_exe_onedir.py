@@ -39,7 +39,7 @@ args = [
     '--clean',                          # 清理临时文件
 
     # 应用程序图标
-    f'--icon={os.path.join(project_root, "assets", "app.ico")}',
+    f'--icon={os.path.join(project_root, "assets", "app.png")}',
 
     # 添加数据文件
     f'--add-data={os.path.join(project_root, "src")};src',

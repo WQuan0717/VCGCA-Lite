@@ -2,7 +2,7 @@
 ; 使用 Inno Setup 6 编译
 
 #define MyAppName "VCGCA-Lite"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "VCGCA"
 #define MyAppURL "https://github.com/vcgca/vcgca-lite"
 #define MyAppExeName "VCGCA-Lite.exe"
@@ -39,7 +39,8 @@ VersionInfoDescription={#MyAppName} 安装程序
 VersionInfoCopyright=Copyright (C) 2026 {#MyAppPublisher}
 
 ; 图标设置
-SetupIconFile=assets\app.ico
+; 注意：Inno Setup 只支持 ICO 格式，暂时禁用安装包图标
+; SetupIconFile=assets\app.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
