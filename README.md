@@ -18,23 +18,21 @@
 
 ## 支持的手势
 
-| 手势 | 描述 |
-|------|------|
-| ✋ 张开手掌 (Open_Palm) | 五指伸直张开 |
-| ✊ 握拳 (Closed_Fist) | 五指全部弯曲握拳 |
-| 👍 点赞 (Thumb_Up) | 竖起大拇指 |
-| 👎 点踩 (Thumb_Down) | 大拇指向下 |
-| ☝️ 食指指天 (Pointing_Up) | 食指向上伸直 |
-| ✌️ 剪刀手 (Victory) | 伸出食指和中指形成"V"字 |
+| 手势                     | 描述            |
+| ---------------------- | ------------- |
+| ✋ 张开手掌 (Open\_Palm)    | 五指伸直张开        |
+| ✊ 握拳 (Closed\_Fist)    | 五指全部弯曲握拳      |
+| 👍 点赞 (Thumb\_Up)      | 竖起大拇指         |
+| 👎 点踩 (Thumb\_Down)    | 大拇指向下         |
+| ☝️ 食指指天 (Pointing\_Up) | 食指向上伸直        |
+| ✌️ 剪刀手 (Victory)       | 伸出食指和中指形成"V"字 |
 
 ## 默认手势控制
 
-| 准备手势 | 响应手势 | 功能 |
-|---------|---------|------|
-| 张开手掌 | 握拳 | 截图并保存 |
-| 张开手掌 | 点赞 | 增大音量 |
-| 张开手掌 | 点踩 | 减小音量 |
-| 剪刀手 | 食指指天 | 显示桌面 |
+| 准备手势 | 响应手势 | 功能    |
+| ---- | ---- | ----- |
+| 张开手掌 | 握拳   | 显示桌面  |
+| 张开手掌 | 剪刀手  | 截图并保存 |
 
 ## 系统要求
 
@@ -71,13 +69,13 @@ python main.py
 
 ## 使用方法
 
-1. **启动程序**：运行 VCGCA-Lite.exe 或 `python main.py`
+1. **启动程序**：运行  `python main.py`
 2. **系统托盘**：右键点击托盘图标访问功能菜单
 3. **手势控制**：
    - 将手放在摄像头前
-   - 做出准备手势并保持 0.5 秒
+   - 做出准备手势并保持 0.5 秒，HUD显示“就绪”，
    - 快速切换到响应手势
-   - 看到屏幕闪光表示触发成功
+   - HUD显示触发的“动作名”
 
 ### 手势控制流程
 
@@ -135,12 +133,10 @@ VCGCA-Lite/
   - 截图后复制到剪贴板
   - 截图保存路径
   - 托盘菜单显示选项
-
 - **显示设置**
   - HUD 透明度
   - HUD 窗口大小
   - HUD 位置（水平/垂直）
-
 - **手势控制设置**
   - 准备时间（毫秒）
   - 变化时间（毫秒）
@@ -149,15 +145,15 @@ VCGCA-Lite/
 
 ## 构建发布
 
-### 构建可执行文件
+### 构建可执行文件（构建程序目录，不需要手动执行）
 
 ```bash
-python build_exe_onedir.py
+# python build_exe_onedir.py
 ```
 
 输出目录：`output/onedir/VCGCA-Lite/`
 
-### 构建安装包
+### 构建安装包（会自动调用 build\_exe\_onedir.py 用于构建程序目录）
 
 ```bash
 python build_installer_onedir.py
@@ -169,13 +165,14 @@ python build_installer_onedir.py
 
 运行构建脚本后会生成以下三个目录，各自用途如下：
 
-| 目录 | 用途 | 说明 |
-|------|------|------|
-| `build_onedir/` | PyInstaller 临时工作目录 | 存放构建过程中的临时文件和缓存，**可以删除** |
-| `output/onedir/VCGCA-Lite/` | 应用程序目录 | 包含完整的可执行程序和所有依赖，**可直接运行**或用于重新打包 |
-| `installer_output/` | 安装包输出目录 | 包含最终生成的 `VCGCA-Lite-Setup-v{version}.exe` 安装程序，**用于分发** |
+| 目录                          | 用途                 | 说明                                                      |
+| --------------------------- | ------------------ | ------------------------------------------------------- |
+| `build_onedir/`             | PyInstaller 临时工作目录 | 存放构建过程中的临时文件和缓存，**可以删除**                                |
+| `output/onedir/VCGCA-Lite/` | 应用程序目录             | 包含完整的可执行程序和所有依赖，**可直接运行**或用于重新打包                        |
+| `installer_output/`         | 安装包输出目录            | 包含最终生成的 `VCGCA-Lite-Setup-v{version}.exe` 安装程序，**用于分发** |
 
 **清理建议**：
+
 - 如果只需要最终安装包，可以删除 `build_onedir/` 和 `output/` 目录
 - 如需重新打包安装程序但不需要重新构建 EXE，保留 `output/onedir/VCGCA-Lite/` 即可
 - `installer_output/` 中的 `.exe` 文件是最终交付物，建议备份
@@ -209,3 +206,4 @@ MIT License
 - [MediaPipe](https://mediapipe.dev/) - 手势检测框架
 - [PyQt6](https://www.riverbankcomputing.com/software/pyqt/) - GUI 框架
 - [Inno Setup](https://jrsoftware.org/isinfo.php) - 安装包制作工具
+
