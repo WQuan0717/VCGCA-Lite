@@ -49,7 +49,7 @@
 
 从 [Releases](https://github.com/WQuan0717/VCGCA-Lite/releases) 页面下载最新版本：
 
-- `VCGCA-Lite-Setup-v1.0.3.exe` - Windows 安装程序
+- `VCGCA-Lite-Setup-v1.0.4.exe` - Windows 安装程序
 
 ### 源码运行
 

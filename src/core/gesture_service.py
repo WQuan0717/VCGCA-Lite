@@ -140,12 +140,40 @@ class GestureService(QThread):
 
     def _get_model_path(self, progress_callback=None):
         """获取或下载模型文件路径"""
+        import sys
+        import shutil
+
         model_dir = os.path.join(os.path.expanduser("~"), ".vcgca-lite", "models")
         os.makedirs(model_dir, exist_ok=True)
 
         model_path = os.path.join(model_dir, "gesture_recognizer.task")
 
         if not os.path.exists(model_path):
+            # 首先检查打包目录中是否有模型文件
+            bundled_model_path = None
+            if hasattr(sys, '_MEIPASS'):
+                # PyInstaller 打包环境
+                bundled_model_path = os.path.join(sys._MEIPASS, "assets", "models", "gesture_recognizer.task")
+            else:
+                # 开发环境：检查项目目录
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                project_root = os.path.dirname(os.path.dirname(script_dir))
+                bundled_model_path = os.path.join(project_root, "assets", "models", "gesture_recognizer.task")
+
+            if bundled_model_path and os.path.exists(bundled_model_path):
+                # 复制打包的模型文件到用户目录
+                if progress_callback:
+                    progress_callback(20, "复制模型文件...")
+                self.init_progress.emit(20, "复制模型文件...")
+                self.log_message.emit("正在复制模型文件...")
+                try:
+                    shutil.copy2(bundled_model_path, model_path)
+                    self.log_message.emit(f"模型文件已复制: {model_path}")
+                    return model_path
+                except Exception as e:
+                    self.log_message.emit(f"模型文件复制失败: {e}")
+            
+            # 如果没有打包的模型文件，尝试下载
             if progress_callback:
                 progress_callback(20, "下载MediaPipe手势识别模型...")
             self.init_progress.emit(20, "下载MediaPipe手势识别模型...")

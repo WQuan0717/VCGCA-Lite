@@ -2,7 +2,7 @@
 ; 使用 Inno Setup 6 编译
 
 #define MyAppName "VCGCA-Lite"
-#define MyAppVersion "1.0.3"
+#define MyAppVersion "1.0.4"
 #define MyAppPublisher "VCGCA"
 #define MyAppURL "https://github.com/vcgca/vcgca-lite"
 #define MyAppExeName "VCGCA-Lite.exe"
