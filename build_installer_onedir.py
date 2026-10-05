@@ -14,15 +14,23 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.utils.version import get_version_string, APP_NAME
 
 # 配置
-INNO_SETUP_PATH = r"D:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+INNO_SETUP_PATH = os.environ.get("INNO_SETUP_PATH") or shutil.which("ISCC.exe")
+if not INNO_SETUP_PATH:
+    for base_dir in (os.environ.get("ProgramFiles(x86)"), os.environ.get("ProgramFiles"),
+                     r"D:\Program Files (x86)"):
+        if base_dir:
+            candidate = os.path.join(base_dir, "Inno Setup 6", "ISCC.exe")
+            if os.path.isfile(candidate):
+                INNO_SETUP_PATH = candidate
+                break
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 ONEDIR_DIST = os.path.join(PROJECT_ROOT, "output", "onedir", APP_NAME)
 INSTALLER_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "installer_output")
 
 def check_inno_setup():
     """检查 Inno Setup 是否安装"""
-    if not os.path.exists(INNO_SETUP_PATH):
-        print(f"错误: 未找到 Inno Setup，请确认安装路径: {INNO_SETUP_PATH}")
+    if not INNO_SETUP_PATH or not os.path.isfile(INNO_SETUP_PATH):
+        print("错误: 未找到 Inno Setup 6。请安装它，或将 INNO_SETUP_PATH 设置为 ISCC.exe 的完整路径。")
         return False
     return True
 
@@ -57,14 +65,12 @@ def build_installer():
         print(f"错误: 未找到安装脚本: {iss_file}")
         return False
     
-    # 清理旧的安装包输出目录
-    if os.path.exists(INSTALLER_OUTPUT_DIR):
-        shutil.rmtree(INSTALLER_OUTPUT_DIR)
+    # 保留其他版本安装包，只由编译器覆盖本次版本的文件。
     os.makedirs(INSTALLER_OUTPUT_DIR, exist_ok=True)
     
     try:
         result = subprocess.run(
-            [INNO_SETUP_PATH, "installer_onedir.iss"],
+            [INNO_SETUP_PATH, f"/DMyAppVersion={get_version_string()}", "installer_onedir.iss"],
             cwd=PROJECT_ROOT,
             check=True,
             capture_output=False

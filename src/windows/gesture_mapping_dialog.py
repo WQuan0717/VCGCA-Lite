@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QComboBox, QGridLayout)
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QMessageBox
 
 from src.core.system_control import SystemController
 from src.utils.gesture_names import (
@@ -129,8 +130,10 @@ class GestureMappingDialog(QDialog):
     def validate(self):
         """验证输入数据"""
         data = self.get_data()
-        if data["prepare"] == "None" and data["response"] == "None":
-            return False, "准备手势和响应手势不能同时为None"
+        if data["prepare"] == "None" or data["response"] == "None":
+            return False, "准备手势和响应手势都必须选择有效手势"
+        if data["prepare"] == data["response"]:
+            return False, "响应手势必须与准备手势不同"
         return True, ""
 
     def accept(self):
@@ -139,5 +142,4 @@ class GestureMappingDialog(QDialog):
         if valid:
             super().accept()
         else:
-            # 可以在这里显示错误提示
-            pass
+            QMessageBox.warning(self, "无效的手势映射", message)

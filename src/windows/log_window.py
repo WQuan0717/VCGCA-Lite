@@ -22,6 +22,7 @@ class LogWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowTitle("日志查看器 - VCGCA-Lite")
         self.setMinimumSize(800, 500)
         self.setWindowIcon(get_application_icon())

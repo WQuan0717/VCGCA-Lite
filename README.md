@@ -39,7 +39,7 @@
 ## 系统要求
 
 - **操作系统**: Windows 10/11
-- **Python**: 3.10+ (运行源码)
+- **Python**: 推荐使用独立的 Python 3.11 64 位环境（见下方开发环境配置）
 - **硬件**: 摄像头，4GB+ 内存
 - **权限**: 屏幕截图和系统控制权限
 
@@ -49,14 +49,15 @@
 
 从 [Releases](https://github.com/WQuan0717/VCGCA-Lite/releases) 页面下载最新版本：
 
-- `VCGCA-Lite-Setup-v1.0.4.exe` - Windows 安装程序
+- `VCGCA-Lite-Setup-v1.0.5.exe` - Windows x64 安装程序
+- `VCGCA-Lite-v1.0.5-windows-x64.zip` - 解压即可运行的便携版
 
 ### 源码运行
 
 ```bash
 # 克隆仓库
-git clone https://github.com/WQuan0717/VCGCA.git
-cd VCGCA
+git clone https://github.com/WQuan0717/VCGCA-Lite.git
+cd VCGCA-Lite
 
 # 创建虚拟环境
 python -m venv venv
@@ -68,6 +69,32 @@ pip install -r requirements.txt
 # 运行程序
 python main.py
 ```
+
+### Conda 开发环境
+
+在已配置 Conda 的终端中执行：
+
+```powershell
+conda env create -f environment.yml
+conda activate vcgca-lite
+python -m pip check
+python -m pytest -q
+python main.py
+```
+
+依赖使用 `requirements.txt`；`requirements-dev.txt` 额外安装回归测试工具。
+`requirements-lock.txt` 记录 Windows / Python 3.11 环境中实际验证过的完整依赖版本，
+需要复现该环境时可执行 `python -m pip install -r requirements-lock.txt`。
+
+如果当前 PowerShell 尚未加载 Conda，可使用 `./run.ps1` 直接调用用户目录下
+`.conda/envs/vcgca-lite/python.exe`。环境安装在其他位置时，使用
+`./run.ps1 -PythonPath '实际环境路径/python.exe'`。
+
+完整的本机配置与修复记录见 [开发说明](docs/DEVELOPMENT.md)。
+
+`python scripts/check_environment.py` 检查依赖、内置模型和窗口初始化。
+加上 `--camera` 可验证摄像头读取与服务重启；检查过程中禁用系统控制动作，
+使用临时配置目录，不会覆盖已有设置或保存摄像头画面。
 
 ## 使用方法
 
@@ -111,9 +138,12 @@ VCGCA-Lite/
 │   │   ├── splash_window.py         # 启动动画
 │   │   └── gesture_mapping_dialog.py # 手势映射对话框
 │   └── tray_app.py            # 托盘应用程序
-├── docs/                      # 文档
-│   ├── README.md
-│   └── CHANGELOG.md
+├── tests/                     # 回归测试
+├── scripts/check_environment.py # 环境与运行检查
+├── environment.yml            # Conda 开发环境
+├── requirements-dev.txt       # 开发依赖
+├── requirements-lock.txt      # 已验证的完整依赖版本
+├── run.ps1                    # PowerShell 启动脚本
 ├── build_exe_onedir.py        # 构建脚本
 ├── build_installer_onedir.py  # 安装包构建脚本
 ├── installer_onedir.iss       # Inno Setup 脚本
@@ -125,7 +155,8 @@ VCGCA-Lite/
 
 ## 配置说明
 
-程序设置保存在 `%APPDATA%\VCGCA-Lite\settings.json`
+程序设置保存在 `%USERPROFILE%\.vcgca-lite\settings.json`，日志为同目录下的 `app.log`。
+内置识别模型首次使用时复制到 `%USERPROFILE%\.vcgca-lite\models\`。
 
 ### 可配置项
 
@@ -156,6 +187,9 @@ VCGCA-Lite/
 输出目录：`output/onedir/VCGCA-Lite/`
 
 ### 构建安装包（会自动调用 build\_exe\_onedir.py 用于构建程序目录）
+
+安装包构建额外需要 Inno Setup 6。脚本会检查 PATH 和常见安装目录；
+自定义安装位置可用环境变量 `INNO_SETUP_PATH` 指定 `ISCC.exe` 的完整路径。
 
 ```bash
 python build_installer_onedir.py
@@ -191,6 +225,17 @@ python build_installer_onedir.py
 MIT License
 
 ## 更新日志
+
+### v1.0.5 (2026-10-05)
+
+- 修复双手手势串用、目标丢失和超时后误触发。
+- 修复空手势映射被恢复、默认设置共享引用及恢复默认不完整。
+- 修复摄像头异常、服务停止和重启时的资源释放与状态残留。
+- Windows 摄像头优先使用 DirectShow，失败时回退默认采集后端。
+- 修复调试预览、无效映射、静音提示、源码开机启动与设置快捷方式。
+- 增加专用 Conda 环境、依赖锁定、回归测试和打包后运行检查。
+- 统一应用、EXE 版本信息与安装包版本号，修正安装器互斥体和仓库链接。
+- 修复 Conda 打包中的原生 DLL 收集与宿主 PATH 同名库冲突。
 
 ### v1.0.0 (2026-04-27)
 

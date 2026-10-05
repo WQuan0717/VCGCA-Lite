@@ -20,6 +20,7 @@ class SettingsWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowTitle("VCGCA-Lite 设置")
         self.setMinimumSize(500, 400)
         self.setWindowIcon(get_application_icon())
@@ -434,10 +435,6 @@ class SettingsWindow(QWidget):
 
     def _load_gesture_mappings_from_settings(self, mappings):
         """从设置加载手势映射到表格"""
-        if not mappings:
-            self._load_gesture_mappings()
-            return
-
         self.gesture_mapping_table.setRowCount(len(mappings))
         for row, mapping in enumerate(mappings):
             # 将英文手势名称转换为中文显示
@@ -649,7 +646,7 @@ class SettingsWindow(QWidget):
 
             <div class="section">
                 <p><strong>Q: 截图保存在哪里？</strong></p>
-                <p>A: 默认保存在用户目录下的 Pictures\Screenshots 文件夹中。</p>
+                <p>A: 默认保存在用户目录下的 Pictures\\VCGCA-Screenshots 文件夹中。</p>
             </div>
         </body>
         </html>
@@ -890,6 +887,9 @@ class SettingsWindow(QWidget):
         default_values = {
             "auto_start": False,
             "show_splash": True,
+            "copy_to_clipboard": False,
+            "screenshot_path": "",
+            "show_open_folder": True,
             "opacity": 80,
             "width": 300,
             "height": 150,
@@ -903,6 +903,9 @@ class SettingsWindow(QWidget):
         # 应用默认设置到UI
         self.auto_start_cb.setChecked(default_values["auto_start"])
         self.show_splash_cb.setChecked(default_values["show_splash"])
+        self.copy_to_clipboard_cb.setChecked(default_values["copy_to_clipboard"])
+        self.screenshot_path_edit.setText(default_values["screenshot_path"])
+        self.show_open_folder_cb.setChecked(default_values["show_open_folder"])
         self.opacity_spin.setValue(default_values["opacity"])
         self.width_spin.setValue(default_values["width"])
         self.height_spin.setValue(default_values["height"])

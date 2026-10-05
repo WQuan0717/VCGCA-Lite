@@ -5,6 +5,7 @@
 
 import os
 import sys
+import subprocess
 import winreg
 from pathlib import Path
 
@@ -21,10 +22,13 @@ class StartupManager:
         """获取当前可执行文件的完整路径"""
         if getattr(sys, 'frozen', False):
             # 如果是打包后的 exe
-            return sys.executable
+            return subprocess.list2cmdline([sys.executable])
         else:
             # 如果是开发环境
-            return os.path.abspath(sys.argv[0])
+            pythonw = Path(sys.executable).with_name("pythonw.exe")
+            interpreter = str(pythonw) if pythonw.exists() else sys.executable
+            entry_point = Path(__file__).resolve().parents[2] / "main.py"
+            return subprocess.list2cmdline([interpreter, str(entry_point)])
 
     @staticmethod
     def is_auto_start_enabled():

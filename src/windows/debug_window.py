@@ -13,6 +13,7 @@ class DebugWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowTitle("VCGCA-Lite 调试窗口 - 视频预览")
         self.setMinimumSize(700, 650)
         self.setWindowIcon(get_application_icon())
@@ -123,11 +124,11 @@ class DebugWindow(QWidget):
         # 连接信号
         gesture_service.log_message.connect(self.add_log)
         gesture_service.frame_ready.connect(self.update_frame)
+        gesture_service.connect_preview()
 
         # 检查服务是否已启动
         if gesture_service.isRunning():
             self.add_log("已连接到手势识别服务")
-            gesture_service.connect_preview()
         else:
             self.add_log("手势识别服务尚未启动，点击'开始服务'启动")
 

@@ -350,5 +350,7 @@ class TrayApplication:
 
         # 显示启动动画（如果启用）
         self.show_splash_and_run()
+        if "--settings" in sys.argv:
+            QTimer.singleShot(0, self.show_settings)
 
         sys.exit(self.app.exec())

@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+import sys
 import time
 from PyQt6.QtCore import QThread, pyqtSignal, QObject
 
@@ -51,6 +52,7 @@ class GestureService(QThread):
         # FPS计算相关
         self.fps = 0
         self.prev_time = 0
+        self._last_timestamp_ms = -1
 
         # 手势识别结果缓存（避免重复输出）
         self.last_gestures = {}
@@ -82,6 +84,7 @@ class GestureService(QThread):
         """重新加载设置（用于设置变更后实时应用）"""
         try:
             gesture_controller.reload_settings()
+            self.clear_gesture_cache()
             self.log_message.emit("[配置] 手势设置已重新加载")
             return True
         except Exception as e:
@@ -94,7 +97,19 @@ class GestureService(QThread):
         Args:
             progress_callback: 进度回调函数，接收(进度百分比, 状态消息)
         """
+        if self.isRunning():
+            return True
+        self._release_resources()
+        self.init_error = None
+        self.last_gestures.clear()
+        self.frame_count = 0
+        self.prev_time = 0
+        self.fps = 0
+        self._last_timestamp_ms = -1
+        gesture_controller.reload_settings()
+
         if not MEDIAPIPE_AVAILABLE:
+            self.init_error = "MediaPipe不可用"
             self.log_message.emit("MediaPipe不可用")
             if progress_callback:
                 progress_callback(0, "MediaPipe不可用")
@@ -215,72 +230,69 @@ class GestureService(QThread):
 
     def run(self):
         """主循环"""
-        if self.init_error:
+        try:
+            if self.recognizer is None:
+                raise RuntimeError(self.init_error or "手势识别器尚未初始化")
+            if sys.platform == "win32":
+                # 优先使用 DirectShow，减少部分 Windows 摄像头的首次取帧延迟。
+                self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+                if not self.cap.isOpened():
+                    self.cap.release()
+                    self.cap = None
+                    self.log_message.emit("DirectShow 无法打开摄像头，尝试默认采集后端")
+                    self.cap = cv2.VideoCapture(0)
+            else:
+                self.cap = cv2.VideoCapture(0)
+            if not self.cap.isOpened():
+                raise RuntimeError("无法打开摄像头")
+
+            width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = self.cap.get(cv2.CAP_PROP_FPS)
+            self.log_message.emit(f"摄像头已启动，分辨率: {width}x{height}，帧率: {fps:.1f}fps")
+            self.running = True
+
+            # 中断请求不会被摄像头初始化完成后的 running=True 覆盖。
+            while self.running and not self.isInterruptionRequested():
+                ret, frame = self.cap.read()
+                if not ret:
+                    raise RuntimeError("无法读取摄像头画面")
+                frame = self.process_gestures(cv2.flip(frame, 1))
+                gesture_controller.check_state_timeout()
+
+                current_time = time.monotonic()
+                if self.prev_time and current_time > self.prev_time:
+                    self.fps = 1 / (current_time - self.prev_time)
+                self.prev_time = current_time
+                self.frame_count += 1
+                cv2.putText(frame, f"FPS: {self.fps:.1f}", (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                if self.control_enabled:
+                    state_text = f"Control: {gesture_controller.get_current_state_display()}"
+                    cv2.putText(frame, state_text, (10, 60),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+                if self.has_preview:
+                    self.frame_ready.emit(frame)
+        except Exception as e:
+            self.init_error = f"手势识别服务失败: {e}"
             self.log_message.emit(self.init_error)
+        finally:
+            self.running = False
+            self._release_resources()
+            self.clear_gesture_cache()
+            gesture_controller._reset_to_idle("服务已停止")
+            self.log_message.emit("手势识别服务已停止")
 
-        # 初始化摄像头
-        self.cap = cv2.VideoCapture(0)
-        if not self.cap.isOpened():
-            self.log_message.emit("错误：无法打开摄像头")
-            return
-
-        # 获取摄像头默认配置
-        default_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        default_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        default_fps = self.cap.get(cv2.CAP_PROP_FPS)
-
-        self.log_message.emit(f"摄像头已启动")
-        self.log_message.emit(f"默认分辨率: {default_width}x{default_height}")
-        self.log_message.emit(f"默认帧率: {default_fps:.1f}fps")
-        self.log_message.emit("手势控制功能已启用")
-
-        self.running = True
-
-        while self.running:
-            ret, frame = self.cap.read()
-            if not ret:
-                self.log_message.emit("错误：无法读取摄像头画面")
-                break
-
-            # 水平翻转画面（镜像效果）
-            frame = cv2.flip(frame, 1)
-
-            # 手势识别
-            if self.recognizer:
-                frame = self.process_gestures(frame)
-
-            # 手动触发控制器状态检查（确保冷静期等状态超时能被处理）
-            gesture_controller.check_state_timeout()
-
-            # 计算真实FPS
-            current_time = time.time()
-            if self.prev_time != 0:
-                self.fps = 1 / (current_time - self.prev_time)
-            self.prev_time = current_time
-
-            # 添加帧计数和信息
-            self.frame_count += 1
-            fps_text = f"FPS: {self.fps:.1f}"
-            cv2.putText(frame, fps_text, (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-
-            # 显示控制状态
-            if self.control_enabled:
-                state_text = f"Control: {gesture_controller.get_current_state_display()}"
-                cv2.putText(frame, state_text, (10, 60),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-
-            # 如果有预览窗口连接，发送帧
-            if self.has_preview:
-                self.frame_ready.emit(frame)
-
-        # 释放资源
-        if self.cap:
-            self.cap.release()
-        if self.recognizer:
-            self.recognizer.close()
-
-        self.log_message.emit("手势识别服务已停止")
+    def _release_resources(self):
+        """所有退出路径都释放摄像头和模型；清除已关闭的对象引用。"""
+        cap, self.cap = self.cap, None
+        recognizer, self.recognizer = self.recognizer, None
+        for resource, method in ((cap, "release"), (recognizer, "close")):
+            if resource is not None:
+                try:
+                    getattr(resource, method)()
+                except Exception as e:
+                    self.log_message.emit(f"资源释放失败: {e}")
 
     def process_gestures(self, frame):
         """处理手势识别"""
@@ -292,10 +304,12 @@ class GestureService(QThread):
             mp_image = Image(image_format=ImageFormat.SRGB, data=rgb_frame)
 
             # 识别手势 (VIDEO模式需要使用recognize_for_video方法，并传入timestamp_ms)
-            timestamp_ms = int(time.time() * 1000)
+            timestamp_ms = max(int(time.monotonic() * 1000), self._last_timestamp_ms + 1)
+            self._last_timestamp_ms = timestamp_ms
             recognition_result = self.recognizer.recognize_for_video(mp_image, timestamp_ms)
 
             # 处理识别结果
+            current_gestures = {}
             if recognition_result.gestures:
                 for idx, gestures in enumerate(recognition_result.gestures):
                     if gestures:
@@ -305,16 +319,14 @@ class GestureService(QThread):
                         confidence = top_gesture.score
 
                         # 只在手势变化时输出日志
-                        hand_key = f"hand_{idx}"
-                        if hand_key not in self.last_gestures or \
-                           self.last_gestures[hand_key] != gesture_name:
-                            self.last_gestures[hand_key] = gesture_name
+                        handedness = getattr(recognition_result, "handedness", [])
+                        hand_key = (handedness[idx][0].category_name
+                                    if idx < len(handedness) and handedness[idx]
+                                    else f"hand_{idx}")
+                        current_gestures[hand_key] = (gesture_name, confidence)
+                        if self.last_gestures.get(hand_key) != gesture_name:
                             self.log_message.emit(f"手势识别: {gesture_name} (置信度: {confidence:.2f})")
                             self.gesture_detected.emit(gesture_name, confidence)
-
-                            # 传递给手势控制器进行处理
-                            if self.control_enabled:
-                                gesture_controller.on_gesture_detected(gesture_name, idx)
 
                         # 在画面上显示手势名称
                         if recognition_result.hand_landmarks:
@@ -333,15 +345,15 @@ class GestureService(QThread):
                         if recognition_result.hand_landmarks:
                             self._draw_landmarks(frame, recognition_result.hand_landmarks[idx])
 
-            else:
-                # 没有检测到手（手离开画面），发送None作为丢失目标信号
-                if self.last_gestures:
-                    # 通知控制器手已离开
-                    if self.control_enabled:
-                        for hand_key in list(self.last_gestures.keys()):
-                            gesture_controller.on_gesture_detected("None", int(hand_key.split("_")[1]))
-                    self.log_message.emit("手势识别: None (丢失目标)")
-                    self.last_gestures.clear()
+            # 使用左右手身份而非结果顺序；另一只手还在时也要报告目标丢失。
+            for hand_key in self.last_gestures.keys() - current_gestures.keys():
+                if self.control_enabled:
+                    gesture_controller.on_gesture_detected("None", hand_key)
+                self.log_message.emit(f"手势识别: None (丢失目标: {hand_key})")
+            for hand_key, (gesture_name, confidence) in current_gestures.items():
+                if self.control_enabled and self.last_gestures.get(hand_key) != gesture_name:
+                    gesture_controller.on_gesture_detected(gesture_name, hand_key)
+            self.last_gestures = {key: value[0] for key, value in current_gestures.items()}
 
         except Exception as e:
             self.log_message.emit(f"手势识别错误: {e}")
@@ -376,8 +388,12 @@ class GestureService(QThread):
 
     def stop(self):
         """停止服务"""
+        self.requestInterruption()
         self.running = False
         self.wait()
+        self._release_resources()
+        self.clear_gesture_cache()
+        gesture_controller._reset_to_idle("服务已停止")
 
     def connect_preview(self):
         """连接预览窗口"""
@@ -394,12 +410,15 @@ class GestureService(QThread):
     def enable_control(self):
         """启用控制功能"""
         self.control_enabled = True
+        self.clear_gesture_cache()
         gesture_controller.reload_settings()
         self.log_message.emit("手势控制功能已启用")
 
     def disable_control(self):
         """禁用控制功能"""
         self.control_enabled = False
+        self.clear_gesture_cache()
+        gesture_controller._reset_to_idle("控制已禁用")
         self.log_message.emit("手势控制功能已禁用")
 
 

@@ -2,9 +2,11 @@
 ; 使用 Inno Setup 6 编译
 
 #define MyAppName "VCGCA-Lite"
-#define MyAppVersion "1.0.4"
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.5"
+#endif
 #define MyAppPublisher "VCGCA"
-#define MyAppURL "https://github.com/vcgca/vcgca-lite"
+#define MyAppURL "https://github.com/WQuan0717/VCGCA-Lite"
 #define MyAppExeName "VCGCA-Lite.exe"
 
 [Setup]
@@ -12,6 +14,9 @@
 AppId={{B8F5D3A1-4E2C-4B9A-9F6D-3E8C2A1B5D4F}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+AppMutex=VCGCA-Lite-SingleInstance
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
@@ -76,7 +81,7 @@ begin
   Result := true;
   
   // 检查是否已运行
-  if CheckForMutexes('VCGCA-Lite-Running') then
+  if CheckForMutexes('VCGCA-Lite-SingleInstance') then
   begin
     MsgBox('VCGCA-Lite 正在运行，请先关闭程序后再安装。', mbError, MB_OK);
     Result := false;
@@ -95,7 +100,7 @@ begin
       // 删除 %APPDATA%\VCGCA-Lite
       DelTree(ExpandConstant('{userappdata}\VCGCA-Lite'), True, True, True);
       // 删除用户主目录下的 .vcgca-lite 文件夹
-      DelTree(ExpandConstant('{userprofile}\.vcgca-lite'), True, True, True);
+      DelTree(ExpandConstant('{%USERPROFILE}\.vcgca-lite'), True, True, True);
     end;
   end;
 end;

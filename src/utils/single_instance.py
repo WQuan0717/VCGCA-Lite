@@ -13,6 +13,13 @@ class SingleInstanceChecker:
     def __init__(self, mutex_name="VCGCA-Lite-SingleInstance"):
         self.mutex_name = mutex_name
         self.mutex_handle = None
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        self._create_mutex = kernel32.CreateMutexW
+        self._create_mutex.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+        self._create_mutex.restype = wintypes.HANDLE
+        self._close_handle = kernel32.CloseHandle
+        self._close_handle.argtypes = [wintypes.HANDLE]
+        self._close_handle.restype = wintypes.BOOL
         
     def is_already_running(self):
         """检查程序是否已经在运行
@@ -22,14 +29,20 @@ class SingleInstanceChecker:
             False: 没有实例在运行，可以启动
         """
         # 尝试创建命名互斥体
-        self.mutex_handle = ctypes.windll.kernel32.CreateMutexW(
+        if self.mutex_handle is not None:
+            return False
+        ctypes.set_last_error(0)
+        self.mutex_handle = self._create_mutex(
             None,  # 默认安全属性
             False,  # 不立即拥有
             self.mutex_name  # 互斥体名称
         )
         
         # 获取错误码
-        error = ctypes.windll.kernel32.GetLastError()
+        error = ctypes.get_last_error()
+        if not self.mutex_handle:
+            self.mutex_handle = None
+            raise ctypes.WinError(error)
         
         # ERROR_ALREADY_EXISTS = 183
         if error == 183:
@@ -43,7 +56,7 @@ class SingleInstanceChecker:
     def _close_mutex(self):
         """关闭互斥体句柄"""
         if self.mutex_handle:
-            ctypes.windll.kernel32.CloseHandle(self.mutex_handle)
+            self._close_handle(self.mutex_handle)
             self.mutex_handle = None
     
     def release(self):

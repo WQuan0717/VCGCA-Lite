@@ -33,6 +33,7 @@ Thumbs.db
 
 # Project build outputs
 *.log
+.pytest_cache/
 output/
 build_onedir/
 installer_output/

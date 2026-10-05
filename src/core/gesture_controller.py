@@ -49,6 +49,7 @@ class GestureController(QObject):
 
         # 当前检测到的手势
         self.prepare_gesture = None  # 准备手势
+        self.active_hand_id = None  # 只由开始准备的那只手完成组合
 
         # 时间记录
         self.state_start_time = 0  # 当前状态开始时间
@@ -91,22 +92,22 @@ class GestureController(QObject):
 
         # 加载手势映射 - 强制使用英文key
         mappings = gesture_settings.get("mappings", [])
+        if not isinstance(mappings, list):
+            mappings = default_settings["mappings"]
         valid_mappings = []
 
         for mapping in mappings:
+            if not isinstance(mapping, dict):
+                continue
             action = mapping.get("action", "")
             # 只接受英文key
-            if action in SystemController.AVAILABLE_ACTIONS:
+            if (action in SystemController.AVAILABLE_ACTIONS
+                    and mapping.get("prepare") not in (None, "", "None")
+                    and mapping.get("response") not in (None, "", "None")
+                    and mapping.get("prepare") != mapping.get("response")):
                 valid_mappings.append(mapping)
 
-        # 如果没有有效映射，使用默认映射
-        if not valid_mappings:
-            valid_mappings = default_settings["mappings"]
-            gesture_settings["mappings"] = valid_mappings
-            settings_manager.set_section("gesture", gesture_settings)
-            settings_manager.save_settings()
-            self.log_message.emit("[配置] 配置无效，已重置为默认配置")
-
+        # 空列表表示用户禁用了所有映射，不能自动重新启用默认动作。
         self.mappings = valid_mappings
 
         self.log_message.emit(f"[配置] 准备时间={self.prepare_time}s | 变化时间={self.change_time}s | 冷静时间={self.cooldown_time}s | 映射数={len(self.mappings)}")
@@ -114,25 +115,26 @@ class GestureController(QObject):
     def reload_settings(self):
         """重新加载设置"""
         self.load_settings()
+        self._reset_to_idle("设置已变更")
 
     def on_gesture_detected(self, gesture_name, hand_id=0):
         """当检测到新手势时调用 - 根据伪代码逻辑重构"""
-        current_time = time.time()
+        current_time = time.monotonic()
+        # 先处理超时，避免丢失目标超时后的第一帧仍触发旧组合。
+        self.check_state_timeout()
+        if self.active_hand_id is not None and hand_id != self.active_hand_id:
+            return
 
-        # 冷静期检查 - 如果冷静期结束，自动切换到空闲
+        # 超时已在上方处理，冷静期内忽略所有手势。
         if self.current_state == self.STATE_COOLDOWN:
-            if current_time - self.state_start_time >= self.cooldown_time:
-                self._reset_to_idle("冷静期结束")
-                self.log_message.emit("[状态] 冷静期结束 → 空闲")
-            else:
-                # 冷静期内忽略所有手势
-                return
+            return
 
         # 空闲状态：等待准备手势
         if self.current_state == self.STATE_IDLE:
             if self._is_valid_prepare_gesture(gesture_name):
                 # 检测到有效准备手势，进入准备等待期
                 self.prepare_gesture = gesture_name
+                self.active_hand_id = hand_id
                 self.current_state = self.STATE_WAITING_PREPARE
                 self.state_start_time = current_time
                 self.state_changed.emit("waiting_prepare")
@@ -163,6 +165,7 @@ class GestureController(QObject):
                 # 如果新手势也是有效的准备手势，重新开始
                 if self._is_valid_prepare_gesture(gesture_name):
                     self.prepare_gesture = gesture_name
+                    self.active_hand_id = hand_id
                     self.current_state = self.STATE_WAITING_PREPARE
                     self.state_start_time = current_time
                     self.state_changed.emit("waiting_prepare")
@@ -280,6 +283,7 @@ class GestureController(QObject):
         old_state = self.current_state
         self.current_state = self.STATE_IDLE
         self.prepare_gesture = None
+        self.active_hand_id = None
         self.is_timing = False
         self.none_start_time = 0
         self.state_changed.emit("idle")
@@ -321,7 +325,7 @@ class GestureController(QObject):
 
     def check_state_timeout(self):
         """检查状态超时（由 gesture_service 定期调用）"""
-        current_time = time.time()
+        current_time = time.monotonic()
 
         if self.current_state == self.STATE_WAITING_PREPARE:
             # 准备时间结束，进入变化等待期

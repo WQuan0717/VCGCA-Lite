@@ -239,7 +239,7 @@ class HUDWindow(QWidget):
                 "screenshot": "截图",
                 "volume_up": "音量+",
                 "volume_down": "音量-",
-                "volume_mute": "静音",
+                "mute_toggle": "静音",
                 "show_desktop": "桌面",
             }
             self.last_action_name = action_names.get(action_key, action_key)
