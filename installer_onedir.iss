@@ -1,20 +1,28 @@
-; VCGCA-Lite onedir 模式安装脚本
+; 视觉手势控制系统 onedir 模式安装脚本
 ; 使用 Inno Setup 6 编译
 
-#define MyAppName "VCGCA-Lite"
-#ifndef MyAppVersion
-  #define MyAppVersion "1.0.5"
+#ifndef MyAppName
+  #define MyAppName "视觉手势控制系统"
 #endif
-#define MyAppPublisher "VCGCA"
+#ifndef MyAppBinaryName
+  #define MyAppBinaryName "VisionGestureControl"
+#endif
+#ifndef MyAppMutex
+  #define MyAppMutex "VisionGestureControl-SingleInstance"
+#endif
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.0"
+#endif
+#define MyAppPublisher "个人开发者"
 #define MyAppURL "https://github.com/WQuan0717/VCGCA-Lite"
-#define MyAppExeName "VCGCA-Lite.exe"
+#define MyAppExeName MyAppBinaryName + ".exe"
 
 [Setup]
 ; 应用信息
-AppId={{B8F5D3A1-4E2C-4B9A-9F6D-3E8C2A1B5D4F}
+AppId={{BCBF102B-3EA8-4D3F-8407-EA939F3C6A1A}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-AppMutex=VCGCA-Lite-SingleInstance
+AppMutex={#MyAppMutex}
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 AppPublisher={#MyAppPublisher}
@@ -23,12 +31,12 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 
 ; 默认安装路径
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={autopf}\{#MyAppBinaryName}
 DisableProgramGroupPage=yes
 
 ; 输出设置
 OutputDir=installer_output
-OutputBaseFilename=VCGCA-Lite-Setup-v{#MyAppVersion}
+OutputBaseFilename={#MyAppBinaryName}-Setup-v{#MyAppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -44,8 +52,7 @@ VersionInfoDescription={#MyAppName} 安装程序
 VersionInfoCopyright=Copyright (C) 2026 {#MyAppPublisher}
 
 ; 图标设置
-; 注意：Inno Setup 只支持 ICO 格式，暂时禁用安装包图标
-; SetupIconFile=assets\app.ico
+SetupIconFile=assets\app.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
@@ -54,9 +61,16 @@ Name: "chinesesimplified"; MessagesFile: "ChineseSimplified.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+[InstallDelete]
+; 旧的改名测试版曾包含这些不再使用的可选运行库。只清理应用自身的
+; 已知组件目录和文件，不触碰用户设置、截图或其他安装目录内容。
+Type: filesandordirs; Name: "{app}\_internal\PyQt6"
+Type: filesandordirs; Name: "{app}\_internal\_sounddevice_data"
+Type: files; Name: "{app}\_internal\cv2\opencv_videoio_ffmpeg*.dll"
+
 [Files]
 ; onedir 模式：复制整个应用程序文件夹
-Source: "output\onedir\VCGCA-Lite\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "output\onedir\{#MyAppBinaryName}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 ; 开始菜单快捷方式
@@ -70,10 +84,6 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 ; 安装完成后启动程序
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
-[UninstallDelete]
-; 卸载时删除的文件和目录
-Type: filesandordirs; Name: "{app}"
-
 [Code]
 // 初始化安装程序
 function InitializeSetup(): Boolean;
@@ -81,9 +91,9 @@ begin
   Result := true;
   
   // 检查是否已运行
-  if CheckForMutexes('VCGCA-Lite-SingleInstance') then
+  if CheckForMutexes('{#MyAppMutex}') then
   begin
-    MsgBox('VCGCA-Lite 正在运行，请先关闭程序后再安装。', mbError, MB_OK);
+    MsgBox('{#MyAppName}正在运行，请先关闭程序后再安装。', mbError, MB_OK);
     Result := false;
     Exit;
   end;
@@ -97,10 +107,8 @@ begin
     // 询问是否删除用户配置
     if MsgBox('是否删除用户配置文件和设置？', mbConfirmation, MB_YESNO) = IDYES then
     begin
-      // 删除 %APPDATA%\VCGCA-Lite
-      DelTree(ExpandConstant('{userappdata}\VCGCA-Lite'), True, True, True);
-      // 删除用户主目录下的 .vcgca-lite 文件夹
-      DelTree(ExpandConstant('{%USERPROFILE}\.vcgca-lite'), True, True, True);
+      // 只删除新版本自己的设置；旧版数据不会自动迁移或删除。
+      DelTree(ExpandConstant('{%USERPROFILE}\.vision-gesture-control'), True, True, True);
     end;
   end;
 end;

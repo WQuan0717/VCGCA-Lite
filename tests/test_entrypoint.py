@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import sys
 
 import pytest
-from PyQt6.QtCore import QTimer
+from PySide6.QtCore import QTimer
 
 import main as entrypoint
 from src.tray_app import TrayApplication, QSystemTrayIcon

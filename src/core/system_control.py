@@ -8,9 +8,44 @@ import datetime
 from pathlib import Path
 import ctypes
 from ctypes import cast, POINTER
-import pyautogui
+from ctypes import wintypes
 from PIL import ImageGrab
 import io
+
+
+class _KeyboardInput(ctypes.Structure):
+    _fields_ = [("vk", wintypes.WORD), ("scan", wintypes.WORD),
+                ("flags", wintypes.DWORD), ("time", wintypes.DWORD),
+                ("extra_info", ctypes.c_size_t)]
+
+
+class _MouseInput(ctypes.Structure):
+    # The complete union is needed for the correct INPUT size on 64-bit Windows.
+    _fields_ = [("dx", wintypes.LONG), ("dy", wintypes.LONG),
+                ("mouse_data", wintypes.DWORD), ("flags", wintypes.DWORD),
+                ("time", wintypes.DWORD), ("extra_info", ctypes.c_size_t)]
+
+
+class _HardwareInput(ctypes.Structure):
+    _fields_ = [("message", wintypes.DWORD), ("param_l", wintypes.WORD),
+                ("param_h", wintypes.WORD)]
+
+
+class _InputData(ctypes.Union):
+    _fields_ = [("keyboard", _KeyboardInput), ("mouse", _MouseInput),
+                ("hardware", _HardwareInput)]
+
+
+class _Input(ctypes.Structure):
+    _anonymous_ = ("data",)
+    _fields_ = [("type", wintypes.DWORD), ("data", _InputData)]
+
+
+def _keyboard_input(key, released=False):
+    event = _Input()
+    event.type = 1  # INPUT_KEYBOARD
+    event.keyboard = _KeyboardInput(key, 0, 0x0002 if released else 0, 0, 0)
+    return event
 
 
 class SystemController:
@@ -25,6 +60,11 @@ class SystemController:
         "show_desktop": "显示桌面",
     }
 
+    @staticmethod
+    def get_default_screenshot_dir():
+        """获取新版本的默认截图目录。"""
+        return Path.home() / "Pictures" / "VisionGestureControl-Screenshots"
+
     def __init__(self):
         """初始化系统控制器"""
         self._screenshot_dir = None
@@ -38,9 +78,9 @@ class SystemController:
             if custom_path:
                 self._screenshot_dir = Path(custom_path)
             else:
-                self._screenshot_dir = Path.home() / "Pictures" / "VCGCA-Screenshots"
+                self._screenshot_dir = self.get_default_screenshot_dir()
         except Exception:
-            self._screenshot_dir = Path.home() / "Pictures" / "VCGCA-Screenshots"
+            self._screenshot_dir = self.get_default_screenshot_dir()
 
         # 确保目录存在
         self._screenshot_dir.mkdir(parents=True, exist_ok=True)
@@ -205,11 +245,31 @@ class SystemController:
 
     def show_desktop(self):
         """显示桌面"""
-        # 使用Windows API发送Win+D快捷键
-        pyautogui.keyDown('win')
-        pyautogui.keyDown('d')
-        pyautogui.keyUp('d')
-        pyautogui.keyUp('win')
+        # Send Win+D through Windows rather than importing an automation suite
+        # (and its optional MouseInfo dependency) for this one shortcut.
+        send_input = ctypes.WinDLL("user32", use_last_error=True).SendInput
+        send_input.argtypes = (wintypes.UINT, ctypes.POINTER(_Input), ctypes.c_int)
+        send_input.restype = wintypes.UINT
+        events = (_Input * 4)(
+            _keyboard_input(0x5B), _keyboard_input(0x44),
+            _keyboard_input(0x44, True), _keyboard_input(0x5B, True),
+        )
+        sent = send_input(len(events), events, ctypes.sizeof(_Input))
+        if sent != len(events):
+            # Avoid leaving a modifier pressed if Windows accepted only a prefix.
+            pressed = []
+            for event in events[:sent]:
+                key = event.keyboard.vk
+                if event.keyboard.flags & 0x0002:
+                    if key in pressed:
+                        pressed.remove(key)
+                else:
+                    pressed.append(key)
+            if pressed:
+                releases = (_Input * len(pressed))(
+                    *(_keyboard_input(key, True) for key in reversed(pressed)))
+                send_input(len(releases), releases, ctypes.sizeof(_Input))
+            raise OSError("Windows 未能完整发送显示桌面的快捷键")
         print("显示桌面")
 
 

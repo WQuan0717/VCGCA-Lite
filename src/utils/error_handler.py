@@ -6,7 +6,7 @@
 
 import sys
 import traceback
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from src.utils.logger import log_manager
 

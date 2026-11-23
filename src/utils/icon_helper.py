@@ -1,7 +1,7 @@
 import os
 import sys
-from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QBrush
-from PyQt6.QtCore import Qt
+from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QBrush
+from PySide6.QtCore import Qt
 
 
 def get_icon_path():

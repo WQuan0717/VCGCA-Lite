@@ -1,6 +1,8 @@
-# VCGCA-Lite
+# 视觉手势控制系统
 
-视觉手势控制系统 (Vision-based Gesture Control Application Lite)
+Vision-Based Gesture Control System
+
+当前版本：1.0.0（新名称重新起算；Git 标签为 `vision-v1.0.0`）。
 
 基于 MediaPipe 的轻量级手势识别系统，通过摄像头捕捉手势动作，实现无接触式电脑控制。
 
@@ -47,10 +49,12 @@
 
 ### 正式版安装包
 
-从 [Releases](https://github.com/WQuan0717/VCGCA-Lite/releases) 页面下载最新版本：
+从 [Releases](https://github.com/WQuan0717/VCGCA-Lite/releases) 页面下载改名后的版本。
+旧版 VCGCA-Lite 的标签、源码和发行文件仍然保留；由于历史发行的第三方通知尚待完整核对，旧 Release 暂设为草稿。新版使用独立的 `vision-v1.0.0` 标签。
 
-- `VCGCA-Lite-Setup-v1.0.5.exe` - Windows x64 安装程序
-- `VCGCA-Lite-v1.0.5-windows-x64.zip` - 解压即可运行的便携版
+- `VisionGestureControl-Setup-v1.0.0.exe` - Windows x64 安装程序
+- `VisionGestureControl-v1.0.0-windows-x64.zip` - 解压完整目录后运行的便携版
+- `Qt-6.11.2-source-archives.zip` - 所用 Qt 和 PySide/Shiboken 的上游源码归档
 
 ### 源码运行
 
@@ -92,19 +96,22 @@ python main.py
 
 完整的本机配置与修复记录见 [开发说明](docs/DEVELOPMENT.md)。
 
-`python scripts/check_environment.py` 检查依赖、内置模型和窗口初始化。
-加上 `--camera` 可验证摄像头读取与服务重启；检查过程中禁用系统控制动作，
+阅读 [MediaPipe 隐私说明](https://developers.google.com/edge/mediapipe/solutions/privacy)后，
+可用 `python scripts/check_environment.py --acknowledge-mediapipe-privacy` 检查依赖、内置模型和窗口初始化。
+再加上 `--camera` 可验证摄像头读取与服务重启；检查过程中禁用系统控制动作，
 使用临时配置目录，不会覆盖已有设置或保存摄像头画面。
 
 ## 使用方法
 
-1. **启动程序**：运行  `python main.py`
+1. **启动程序**：运行 `python main.py`。首次运行时请阅读并选择是否同意 MediaPipe 隐私说明；不同意时程序不会启动识别服务。
 2. **系统托盘**：右键点击托盘图标访问功能菜单
 3. **手势控制**：
    - 将手放在摄像头前
    - 做出准备手势并保持 1.0 秒，HUD显示"就绪"
    - 快速切换到响应手势
    - HUD显示触发的"动作名"
+
+Google 表示 MediaPipe Tasks 在本机处理输入画面，并可能向 Google 发送 API 使用和性能指标。可在托盘菜单的“隐私说明”中查看说明或撤回同意；撤回后程序退出。
 
 ### 手势控制流程
 
@@ -155,8 +162,11 @@ VCGCA-Lite/
 
 ## 配置说明
 
-程序设置保存在 `%USERPROFILE%\.vcgca-lite\settings.json`，日志为同目录下的 `app.log`。
-内置识别模型首次使用时复制到 `%USERPROFILE%\.vcgca-lite\models\`。
+程序设置保存在 `%USERPROFILE%\.vision-gesture-control\settings.json`，日志为同目录下的 `app.log`。
+内置识别模型首次使用时复制到 `%USERPROFILE%\.vision-gesture-control\models\`。
+截图默认保存在用户目录下的 `Pictures\VisionGestureControl-Screenshots`，也可在设置中更改。
+新版本使用独立的安装标识和用户目录，不会自动迁移或删除旧版的设置与截图。
+为避免同时占用摄像头，应在运行新版本前退出旧版程序。
 
 ### 可配置项
 
@@ -184,7 +194,7 @@ VCGCA-Lite/
 # python build_exe_onedir.py
 ```
 
-输出目录：`output/onedir/VCGCA-Lite/`
+输出目录：`output/onedir/VisionGestureControl/`
 
 ### 构建安装包（会自动调用 build\_exe\_onedir.py 用于构建程序目录）
 
@@ -195,7 +205,7 @@ VCGCA-Lite/
 python build_installer_onedir.py
 ```
 
-输出文件：`installer_output/VCGCA-Lite-Setup-v{version}.exe`
+输出文件：`installer_output/VisionGestureControl-Setup-v{version}.exe`
 
 ### 构建输出目录说明
 
@@ -204,27 +214,33 @@ python build_installer_onedir.py
 | 目录                          | 用途                 | 说明                                                      |
 | --------------------------- | ------------------ | ------------------------------------------------------- |
 | `build_onedir/`             | PyInstaller 临时工作目录 | 存放构建过程中的临时文件和缓存，**可以删除**                                |
-| `output/onedir/VCGCA-Lite/` | 应用程序目录             | 包含完整的可执行程序和所有依赖，**可直接运行**或用于重新打包                        |
-| `installer_output/`         | 安装包输出目录            | 包含最终生成的 `VCGCA-Lite-Setup-v{version}.exe` 安装程序，**用于分发** |
+| `output/onedir/VisionGestureControl/` | 应用程序目录 | 包含可执行程序和依赖，可直接运行或用于重新打包 |
+| `installer_output/`         | 安装包输出目录            | 包含 `VisionGestureControl-Setup-v{version}.exe` 安装程序 |
 
 **清理建议**：
 
 - 如果只需要最终安装包，可以删除 `build_onedir/` 和 `output/` 目录
-- 如需重新打包安装程序但不需要重新构建 EXE，保留 `output/onedir/VCGCA-Lite/` 即可
+- 如需重新打包安装程序但不需要重新构建 EXE，保留 `output/onedir/VisionGestureControl/` 即可
 - `installer_output/` 中的 `.exe` 文件是最终交付物，建议备份
 
 ## 技术栈
 
 - **计算机视觉**: OpenCV, MediaPipe
-- **GUI 框架**: PyQt6
-- **系统控制**: pyautogui, Windows API
+- **GUI 框架**: PySide6 / Qt
+- **系统控制**: Windows API
 - **打包工具**: PyInstaller, Inno Setup
 
 ## 许可证
 
-MIT License
+项目自行编写的代码采用 [MIT License](LICENSE)。Qt、MediaPipe、模型和其他第三方组件适用各自的许可证，完整声明、许可原文和源码获取方式见 [第三方通知](THIRD_PARTY_NOTICES.md)。
 
 ## 更新日志
+
+### 视觉手势控制系统 1.0.0 (2026-11-23)
+
+- 统一中英文名称、图标、用户数据目录和安装标识；历史 VCGCA-Lite 版本继续保留。
+- 界面切换为 PySide6；Windows 快捷键使用系统 API，减少不必要依赖。
+- 补充第三方许可、源码归档和 MediaPipe 隐私说明；首次运行可选择是否同意。
 
 ### v1.0.5 (2026-10-05)
 
@@ -237,7 +253,7 @@ MIT License
 - 统一应用、EXE 版本信息与安装包版本号，修正安装器互斥体和仓库链接。
 - 修复 Conda 打包中的原生 DLL 收集与宿主 PATH 同名库冲突。
 
-### v1.0.0 (2026-04-27)
+### 旧版 VCGCA-Lite v1.0.0 (2026-04-27)
 
 - 正式发布
 - 基于 MediaPipe 的手势识别
@@ -251,6 +267,6 @@ MIT License
 ## 致谢
 
 - [MediaPipe](https://mediapipe.dev/) - 手势检测框架
-- [PyQt6](https://www.riverbankcomputing.com/software/pyqt/) - GUI 框架
+- [Qt for Python / PySide6](https://doc.qt.io/qtforpython-6/) - GUI 框架
 - [Inno Setup](https://jrsoftware.org/isinfo.php) - 安装包制作工具
 

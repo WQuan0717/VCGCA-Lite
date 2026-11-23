@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VCGCA-Lite 构建脚本 - onedir 模式
+视觉手势控制系统构建脚本 - onedir 模式
 构建成文件夹形式，启动更快
 """
 
@@ -8,12 +8,13 @@ import PyInstaller.__main__
 import os
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 # 只扫描当前环境、Qt 与系统目录，避免从宿主工具的 PATH 收集同名不兼容 DLL。
 system_root = Path(os.environ.get('SystemRoot', r'C:\Windows'))
 build_dll_dirs = [
-    Path(sys.prefix) / 'Lib' / 'site-packages' / 'PyQt6' / 'Qt6' / 'bin',
+    Path(sys.prefix) / 'Lib' / 'site-packages' / 'PySide6',
     Path(sys.prefix) / 'Library' / 'bin',
     Path(sys.prefix), system_root / 'System32', system_root,
 ]
@@ -26,14 +27,15 @@ from PyInstaller.utils.win32.versioninfo import (
 
 # 添加项目路径以导入版本信息
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from src.utils.version import get_version_string, APP_NAME, APP_DESCRIPTION, COPYRIGHT, get_full_version_info
+from src.utils.version import (APP_DESCRIPTION, APP_EXECUTABLE_NAME, APP_NAME,
+                               COPYRIGHT, get_full_version_info, get_version_string)
 
 # 获取项目根目录
 project_root = os.path.dirname(os.path.abspath(__file__))
 
 # 获取版本号
 version = get_version_string()
-app_name = APP_NAME  # onedir 模式使用固定名称，不带版本号
+app_name = APP_EXECUTABLE_NAME  # 文件名使用稳定的英文标识，不带版本号
 
 # 输出目录
 output_dir = os.path.join(project_root, "output", "onedir")
@@ -59,8 +61,8 @@ version_info = VSVersionInfo(
         StringStruct('FileVersion', version),
         StringStruct('ProductName', APP_NAME),
         StringStruct('ProductVersion', version),
-        StringStruct('OriginalFilename', f'{APP_NAME}.exe'),
-        StringStruct('InternalName', APP_NAME),
+        StringStruct('OriginalFilename', f'{APP_EXECUTABLE_NAME}.exe'),
+        StringStruct('InternalName', APP_EXECUTABLE_NAME),
         StringStruct('LegalCopyright', COPYRIGHT),
     ])]), VarFileInfo([VarStruct('Translation', [0x0804, 1200])])],
 )
@@ -110,6 +112,17 @@ args = [
     '--hidden-import=mediapipe.tasks.python.core.base_options',
     '--hidden-import=mediapipe.tasks.python.components.containers',
     '--collect-all=mediapipe',
+    # Prevent an unrelated binding or optional GPL diagnostic utility in the
+    # build environment from being pulled into the distributed application.
+    '--exclude-module=PyQt6',
+    '--exclude-module=PyQt5',
+    '--exclude-module=PySide2',
+    '--exclude-module=mouseinfo',
+    # MediaPipe imports its optional audio package, but this app is vision-only.
+    # In particular, do not redistribute the optional ASIO-enabled DLLs.
+    '--exclude-module=sounddevice',
+    '--exclude-module=_sounddevice',
+    '--exclude-module=_sounddevice_data',
 
     # 输出目录
     f'--distpath={output_dir}',
@@ -124,7 +137,52 @@ print(f"版本号: v{version}")
 print(f"输出目录: {dist_dir}")
 print("=" * 60)
 
-PyInstaller.__main__.run(args)
+# 依赖扫描可能导入应用模块；隔离用户目录，避免构建时创建真实配置和日志。
+with tempfile.TemporaryDirectory(prefix="vision-build-") as isolated_home:
+    home_variables = {key: os.environ.get(key) for key in ("USERPROFILE", "HOME")}
+    try:
+        os.environ["USERPROFILE"] = isolated_home
+        os.environ["HOME"] = isolated_home
+        PyInstaller.__main__.run(args)
+    finally:
+        for key, value in home_variables.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+# The application captures cameras only; it does not open media files or use
+# Qt's optional software OpenGL renderer. Exclude those unused binary payloads
+# and Qt's unused translations instead of redistributing unrelated components.
+dist_root = Path(dist_dir).resolve()
+unused_files = [dist_root / '_internal' / 'PySide6' / 'opengl32sw.dll']
+unused_files.extend((dist_root / '_internal' / 'cv2').glob('opencv_videoio_ffmpeg*.dll'))
+for unused in unused_files:
+    if unused.exists():
+        resolved = unused.resolve()
+        if not resolved.is_relative_to(dist_root):
+            raise RuntimeError("拒绝删除构建输出目录以外的文件")
+        resolved.unlink()
+translations = dist_root / '_internal' / 'PySide6' / 'translations'
+if translations.exists():
+    resolved = translations.resolve()
+    if resolved == dist_root or not resolved.is_relative_to(dist_root):
+        raise RuntimeError("拒绝清理构建输出目录以外的路径")
+    shutil.rmtree(resolved)
+
+# Source files are included for inspection; local interpreter caches can
+# contain stale bytecode and machine-specific paths, so do not distribute them.
+for cache_dir in (dist_root / '_internal' / 'src').rglob('__pycache__'):
+    resolved = cache_dir.resolve()
+    if not resolved.is_relative_to(dist_root):
+        raise RuntimeError("拒绝清理构建输出目录以外的路径")
+    shutil.rmtree(resolved)
+
+# Put notices next to the executable so they survive portable distribution and
+# are included verbatim by the installer.
+for document in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+    shutil.copy2(Path(project_root) / document, dist_root / document)
+shutil.copytree(Path(project_root) / 'third_party', dist_root / 'third_party')
 
 print("=" * 60)
 print(f"构建完成!")

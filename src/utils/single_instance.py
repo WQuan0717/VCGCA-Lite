@@ -5,12 +5,13 @@
 
 import ctypes
 from ctypes import wintypes
+from src.utils.version import SINGLE_INSTANCE_MUTEX
 
 
 class SingleInstanceChecker:
     """Windows 互斥体实现的单实例检测"""
     
-    def __init__(self, mutex_name="VCGCA-Lite-SingleInstance"):
+    def __init__(self, mutex_name=SINGLE_INSTANCE_MUTEX):
         self.mutex_name = mutex_name
         self.mutex_handle = None
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)

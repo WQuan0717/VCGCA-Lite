@@ -3,7 +3,7 @@ import numpy as np
 import os
 import sys
 import time
-from PyQt6.QtCore import QThread, pyqtSignal, QObject
+from PySide6.QtCore import QThread, Signal, QObject
 
 # 导入MediaPipe - 使用Gesture Recognizer
 try:
@@ -22,11 +22,11 @@ from src.utils.logger import log_manager
 
 class GestureService(QThread):
     """手势识别服务 - 独立后台线程，不依赖UI"""
-    frame_ready = pyqtSignal(np.ndarray)
-    log_message = pyqtSignal(str)
-    gesture_detected = pyqtSignal(str, float)  # 手势名称, 置信度
-    control_state_changed = pyqtSignal(str)  # 控制状态变化
-    init_progress = pyqtSignal(int, str)  # 进度百分比, 状态消息
+    frame_ready = Signal(np.ndarray)
+    log_message = Signal(str)
+    gesture_detected = Signal(str, float)  # 手势名称, 置信度
+    control_state_changed = Signal(str)  # 控制状态变化
+    init_progress = Signal(int, str)  # 进度百分比, 状态消息
 
     _instance = None
     _initialized = False
@@ -158,7 +158,8 @@ class GestureService(QThread):
         import sys
         import shutil
 
-        model_dir = os.path.join(os.path.expanduser("~"), ".vcgca-lite", "models")
+        from src.utils.version import APP_DATA_DIR_NAME
+        model_dir = os.path.join(os.path.expanduser("~"), APP_DATA_DIR_NAME, "models")
         os.makedirs(model_dir, exist_ok=True)
 
         model_path = os.path.join(model_dir, "gesture_recognizer.task")

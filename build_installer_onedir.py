@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VCGCA-Lite 安装包构建脚本 - onedir 模式
+视觉手势控制系统安装包构建脚本 - onedir 模式
 构建目录版 EXE 并生成安装程序
 """
 
@@ -11,7 +11,7 @@ import shutil
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from src.utils.version import get_version_string, APP_NAME
+from src.utils.version import APP_EXECUTABLE_NAME, APP_NAME, SINGLE_INSTANCE_MUTEX, get_version_string
 
 # 配置
 INNO_SETUP_PATH = os.environ.get("INNO_SETUP_PATH") or shutil.which("ISCC.exe")
@@ -24,7 +24,7 @@ if not INNO_SETUP_PATH:
                 INNO_SETUP_PATH = candidate
                 break
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-ONEDIR_DIST = os.path.join(PROJECT_ROOT, "output", "onedir", APP_NAME)
+ONEDIR_DIST = os.path.join(PROJECT_ROOT, "output", "onedir", APP_EXECUTABLE_NAME)
 INSTALLER_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "installer_output")
 
 def check_inno_setup():
@@ -70,7 +70,9 @@ def build_installer():
     
     try:
         result = subprocess.run(
-            [INNO_SETUP_PATH, f"/DMyAppVersion={get_version_string()}", "installer_onedir.iss"],
+            [INNO_SETUP_PATH, f"/DMyAppVersion={get_version_string()}",
+             f"/DMyAppName={APP_NAME}", f"/DMyAppBinaryName={APP_EXECUTABLE_NAME}",
+             f"/DMyAppMutex={SINGLE_INSTANCE_MUTEX}", "installer_onedir.iss"],
             cwd=PROJECT_ROOT,
             check=True,
             capture_output=False
@@ -88,7 +90,7 @@ def show_result():
     print("=" * 60)
     
     version = get_version_string()
-    installer_name = f"VCGCA-Lite-Setup-v{version}.exe"
+    installer_name = f"{APP_EXECUTABLE_NAME}-Setup-v{version}.exe"
     installer_path = os.path.join(INSTALLER_OUTPUT_DIR, installer_name)
     
     if os.path.exists(installer_path):
@@ -96,7 +98,7 @@ def show_result():
         print(f"\n✓ 安装包已生成:")
         print(f"  文件: {installer_path}")
         print(f"  大小: {file_size:.2f} MB")
-        print(f"\n可以分发给用户进行安装")
+        print("\n第三方许可证与通知位于安装目录的 third_party 文件夹。")
     else:
         print("\n✗ 未找到生成的安装包")
         return False
@@ -105,7 +107,7 @@ def show_result():
 
 def main():
     """主函数"""
-    print("VCGCA-Lite onedir 模式安装包构建工具")
+    print(f"{APP_NAME} onedir 模式安装包构建工具")
     print(f"版本: {get_version_string()}")
     print()
     

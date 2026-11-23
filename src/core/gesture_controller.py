@@ -14,7 +14,7 @@
 """
 
 import time
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from src.core.system_control import system_controller
 from src.utils.settings_manager import settings_manager
@@ -25,11 +25,11 @@ class GestureController(QObject):
     """手势控制器 - 管理手势序列检测和控制功能执行"""
 
     # 信号
-    state_changed = pyqtSignal(str)  # 状态变化信号
-    action_triggered = pyqtSignal(str, str)  # 动作触发信号 (准备手势, 响应手势)
-    log_message = pyqtSignal(str)  # 日志消息
-    screenshot_start = pyqtSignal()  # 截图开始信号（通知HUD隐藏）
-    screenshot_end = pyqtSignal(bool, str)  # 截图结束信号（成功/失败, 消息）
+    state_changed = Signal(str)  # 状态变化信号
+    action_triggered = Signal(str, str)  # 动作触发信号 (准备手势, 响应手势)
+    log_message = Signal(str)  # 日志消息
+    screenshot_start = Signal()  # 截图开始信号（通知HUD隐藏）
+    screenshot_end = Signal(bool, str)  # 截图结束信号（成功/失败, 消息）
 
     def __init__(self):
         super().__init__()

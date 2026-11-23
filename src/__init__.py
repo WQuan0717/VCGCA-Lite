@@ -1,1 +1,1 @@
-# VCGCA-Lite Tray Application
+# 视觉手势控制系统

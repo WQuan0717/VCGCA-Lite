@@ -1,14 +1,13 @@
-from pathlib import Path
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QLineEdit, QCheckBox, QGroupBox,
                              QSpinBox, QComboBox, QTabWidget, QSlider, QGridLayout,
                              QTextBrowser, QTableWidget, QTableWidgetItem, QHeaderView,
                              QAbstractItemView, QDialog, QFileDialog)
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QFont
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QIcon, QFont
 
 from src.utils.settings_manager import settings_manager
-from src.utils.version import get_version_string, get_full_version_info, APP_NAME, APP_DESCRIPTION
+from src.utils.version import APP_EXECUTABLE_NAME, APP_NAME, get_full_version_info
 from src.utils.icon_helper import get_application_icon
 from src.windows.gesture_mapping_dialog import GestureMappingDialog
 from src.core.system_control import SystemController
@@ -16,12 +15,12 @@ from src.utils.gesture_names import get_gesture_display_name, get_gesture_englis
 
 
 class SettingsWindow(QWidget):
-    closed = pyqtSignal()
+    closed = Signal()
 
     def __init__(self):
         super().__init__()
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.setWindowTitle("VCGCA-Lite 设置")
+        self.setWindowTitle(f"{APP_NAME} 设置")
         self.setMinimumSize(500, 400)
         self.setWindowIcon(get_application_icon())
 
@@ -103,7 +102,7 @@ class SettingsWindow(QWidget):
         path_layout.addWidget(QLabel("保存路径:"))
         self.screenshot_path_edit = QLineEdit()
         self.screenshot_path_edit.setReadOnly(True)
-        self.screenshot_path_edit.setPlaceholderText("默认: Pictures\\VCGCA-Screenshots")
+        self.screenshot_path_edit.setPlaceholderText(f"默认: {SystemController.get_default_screenshot_dir()}")
         path_layout.addWidget(self.screenshot_path_edit)
 
         self.browse_path_btn = QPushButton("浏览...")
@@ -246,7 +245,7 @@ class SettingsWindow(QWidget):
         """浏览选择截图保存路径"""
         current_path = self.screenshot_path_edit.text()
         if not current_path:
-            current_path = str(Path.home() / "Pictures" / "VCGCA-Screenshots")
+            current_path = str(SystemController.get_default_screenshot_dir())
 
         folder = QFileDialog.getExistingDirectory(
             self,
@@ -269,7 +268,7 @@ class SettingsWindow(QWidget):
         custom_path = self.screenshot_path_edit.text()
         if custom_path:
             return custom_path
-        return str(Path.home() / "Pictures" / "VCGCA-Screenshots")
+        return str(SystemController.get_default_screenshot_dir())
 
     def on_h_pos_changed(self, value):
         """水平位置变化"""
@@ -549,7 +548,7 @@ class SettingsWindow(QWidget):
 
             <div class="section">
                 <h3>启动程序</h3>
-                <p>双击 VCGCA-Lite.exe 启动，程序会在系统托盘显示图标。</p>
+                <p>双击 __APP_EXECUTABLE__.exe 启动，程序会在系统托盘显示图标。</p>
             </div>
 
             <div class="section">
@@ -577,7 +576,7 @@ class SettingsWindow(QWidget):
             </div>
 
             <h2>👋 手势说明</h2>
-            <p>所有手势都需要保持<strong>准备时间</strong>默认0.8秒才能触发。</p>
+            <p>所有手势都需要保持<strong>准备时间</strong>默认1.0秒才能触发。</p>
 
             <div class="gesture">
                 <strong>✌️ 剪刀手</strong> - 伸出食指和中指形成"V"字
@@ -646,11 +645,11 @@ class SettingsWindow(QWidget):
 
             <div class="section">
                 <p><strong>Q: 截图保存在哪里？</strong></p>
-                <p>A: 默认保存在用户目录下的 Pictures\\VCGCA-Screenshots 文件夹中。</p>
+                <p>A: 保存在设置中显示的截图文件夹；也可以在设置中选择其他位置。</p>
             </div>
         </body>
         </html>
-        """)
+        """.replace("__APP_EXECUTABLE__", APP_EXECUTABLE_NAME))
 
         layout.addWidget(help_browser)
 
@@ -674,6 +673,10 @@ class SettingsWindow(QWidget):
         name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         app_layout.addWidget(name_label)
 
+        english_name_label = QLabel(version_info['app_english_name'])
+        english_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        app_layout.addWidget(english_name_label)
+
         version_label = QLabel(f"<h3>版本 {version_info['version']}</h3>")
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setStyleSheet("color: #3498db;")
@@ -695,9 +698,8 @@ class SettingsWindow(QWidget):
         row = 0
         info_items = [
             ("开发者:", version_info['developer']),
-            ("公司:", version_info['company']),
             ("构建日期:", version_info['build_date']),
-            ("许可证:", version_info['license']),
+            ("项目代码许可证:", version_info['license']),
         ]
 
         for label_text, value in info_items:
@@ -749,9 +751,9 @@ class SettingsWindow(QWidget):
     def update_window_title(self):
         """更新窗口标题显示修改状态"""
         if self._is_modified:
-            self.setWindowTitle("VCGCA-Lite 设置 *")
+            self.setWindowTitle(f"{APP_NAME} 设置 *")
         else:
-            self.setWindowTitle("VCGCA-Lite 设置")
+            self.setWindowTitle(f"{APP_NAME} 设置")
 
     def load_settings(self):
         """从配置文件加载设置到UI"""

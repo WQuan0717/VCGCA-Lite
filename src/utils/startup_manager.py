@@ -8,6 +8,7 @@ import sys
 import subprocess
 import winreg
 from pathlib import Path
+from src.utils.version import STARTUP_REGISTRY_NAME
 
 
 class StartupManager:
@@ -15,7 +16,7 @@ class StartupManager:
 
     # 注册表路径
     RUN_KEY_PATH = r"Software\Microsoft\Windows\CurrentVersion\Run"
-    APP_NAME = "VCGCA-Lite"
+    APP_NAME = STARTUP_REGISTRY_NAME
 
     @staticmethod
     def get_executable_path():

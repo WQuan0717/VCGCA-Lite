@@ -16,7 +16,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--camera", action="store_true", help="also read the camera and restart the service")
     parser.add_argument("--report", type=Path, help="write a JSON result (also works in windowed EXEs)")
+    parser.add_argument("--acknowledge-mediapipe-privacy", action="store_true",
+                        help="acknowledge Google's MediaPipe Tasks privacy notice")
     args = parser.parse_args()
+    if not args.acknowledge_mediapipe_privacy:
+        raise RuntimeError("MediaPipe Tasks 可能向 Google 发送使用和性能指标；"
+                           "阅读 https://developers.google.com/edge/mediapipe/solutions/privacy "
+                           "后，如同意可添加 --acknowledge-mediapipe-privacy。")
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
@@ -32,7 +38,7 @@ def main():
         if len(opencv_variants) != 1:
             raise RuntimeError(f"Expected one OpenCV distribution, found {opencv_variants}")
         print("PASS OpenCV distribution:", opencv_variants[0])
-        modules = ["PyQt6.QtWidgets", "cv2", "numpy", "mediapipe", "pyautogui", "win32clipboard"]
+        modules = ["PySide6.QtWidgets", "cv2", "numpy", "mediapipe", "win32clipboard"]
         if not getattr(sys, "frozen", False):
             modules.append("PyInstaller")
         for module in modules:

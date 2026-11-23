@@ -1,16 +1,17 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QGraphicsDropShadowEffect
-from PyQt6.QtCore import Qt, QPoint, QTimer
-from PyQt6.QtGui import QColor, QFont, QMouseEvent
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QGraphicsDropShadowEffect
+from PySide6.QtCore import Qt, QPoint, QTimer
+from PySide6.QtGui import QColor, QFont, QMouseEvent
 
 from src.utils.settings_manager import settings_manager
 from src.core.gesture_controller import gesture_controller
 from src.utils.icon_helper import get_application_icon
+from src.utils.version import APP_NAME
 
 
 class HUDWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("VCGCA-Lite HUD")
+        self.setWindowTitle(f"{APP_NAME} HUD")
         
         # 无边框、置顶、工具窗口
         self.setWindowFlags(
@@ -67,7 +68,7 @@ class HUDWindow(QWidget):
         layout.setSpacing(10)
         
         # 标题
-        title_label = QLabel("VCGCA-Lite")
+        title_label = QLabel(APP_NAME)
         title_font = QFont("Microsoft YaHei", 14, QFont.Weight.Bold)
         title_label.setFont(title_font)
         title_label.setStyleSheet("color: #3498db;")
@@ -267,9 +268,9 @@ class HUDWindow(QWidget):
 
     def show_flash_effect(self):
         """显示全屏白色闪光效果（类似手机截图）"""
-        from PyQt6.QtWidgets import QApplication, QWidget
-        from PyQt6.QtCore import Qt, QTimer
-        from PyQt6.QtGui import QPalette, QColor
+        from PySide6.QtWidgets import QApplication, QWidget
+        from PySide6.QtCore import Qt, QTimer
+        from PySide6.QtGui import QPalette, QColor
         
         # 创建全屏闪光窗口
         self.flash_widget = QWidget()

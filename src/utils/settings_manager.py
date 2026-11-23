@@ -2,12 +2,13 @@ import json
 import os
 import tempfile
 from copy import deepcopy
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
+from src.utils.version import APP_DATA_DIR_NAME
 
 
 class SettingsManager(QObject):
     _instance = None
-    settings_changed = pyqtSignal(str, str, object)  # section, key, value
+    settings_changed = Signal(str, str, object)  # section, key, value
     
     def __new__(cls):
         if cls._instance is None:
@@ -21,7 +22,7 @@ class SettingsManager(QObject):
             
         super().__init__()
         self._initialized = True
-        self._config_dir = os.path.join(os.path.expanduser("~"), ".vcgca-lite")
+        self._config_dir = os.path.join(os.path.expanduser("~"), APP_DATA_DIR_NAME)
         self._config_file = os.path.join(self._config_dir, "settings.json")
         
         # 默认配置
@@ -55,6 +56,9 @@ class SettingsManager(QObject):
             "advanced": {
                 "debug_mode": False,
                 "log_to_file": False
+            },
+            "privacy": {
+                "mediapipe_notice_version": 0
             }
         }
         

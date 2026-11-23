@@ -26,17 +26,17 @@ def main():
                 }, ensure_ascii=False, indent=2), encoding="utf-8")
             return 1
 
-    from PyQt6.QtWidgets import QApplication, QMessageBox
-    from src.tray_app import TrayApplication
+    from PySide6.QtWidgets import QApplication, QMessageBox
     from src.utils.single_instance import single_instance_checker
+    from src.utils.version import APP_NAME
 
     # 检查是否已有实例在运行（在创建QApplication之前检查）
     if single_instance_checker.is_already_running():
         # 创建临时QApplication来显示消息框
         temp_app = QApplication(sys.argv)
         msg_box = QMessageBox()
-        msg_box.setWindowTitle("VCGCA-Lite")
-        msg_box.setText("VCGCA-Lite 已经在运行中")
+        msg_box.setWindowTitle(APP_NAME)
+        msg_box.setText(f"{APP_NAME} 已经在运行中")
         msg_box.setInformativeText("程序已在系统托盘中运行，请勿重复启动。")
         msg_box.setIcon(QMessageBox.Icon.Information)
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
@@ -44,9 +44,15 @@ def main():
         return 0
     
     try:
-        # 启动程序
-        app = TrayApplication()
-        return app.run()
+        # Ask before importing the gesture service or initializing MediaPipe.
+        qt_app = QApplication.instance() or QApplication(sys.argv)
+        qt_app.setQuitOnLastWindowClosed(False)
+        from src.utils.settings_manager import settings_manager
+        from src.utils.privacy_notice import ensure_mediapipe_consent
+        if not ensure_mediapipe_consent(settings_manager):
+            return 0
+        from src.tray_app import TrayApplication
+        return TrayApplication(qt_app).run()
     finally:
         # 确保释放互斥体
         single_instance_checker.release()

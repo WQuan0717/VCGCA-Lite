@@ -12,6 +12,6 @@ def test_source_startup_uses_the_environment_interpreter(monkeypatch):
 
 
 def test_packaged_startup_quotes_executable_path(monkeypatch):
-    monkeypatch.setattr(sys, "executable", "C:/Program Files/VCGCA-Lite/VCGCA-Lite.exe")
+    monkeypatch.setattr(sys, "executable", "C:/Program Files/VisionGestureControl/VisionGestureControl.exe")
     monkeypatch.setattr(sys, "frozen", True, raising=False)
-    assert StartupManager.get_executable_path() == '"C:/Program Files/VCGCA-Lite/VCGCA-Lite.exe"'
+    assert StartupManager.get_executable_path() == '"C:/Program Files/VisionGestureControl/VisionGestureControl.exe"'

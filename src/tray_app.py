@@ -1,8 +1,8 @@
 import sys
 import os
-from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QWidget
-from PyQt6.QtGui import QIcon, QAction
-from PyQt6.QtCore import Qt, QThread, QTimer
+from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QWidget
+from PySide6.QtGui import QIcon, QAction
+from PySide6.QtCore import Qt, QThread, QTimer
 
 from src.windows.settings_window import SettingsWindow
 from src.windows.hud_window import HUDWindow
@@ -12,6 +12,8 @@ from src.windows.log_window import LogWindow
 from src.utils.icon_helper import get_application_icon
 from src.utils.settings_manager import settings_manager
 from src.utils.startup_manager import StartupManager
+from src.utils.version import APP_NAME
+from src.utils.privacy_notice import review_mediapipe_consent
 from src.utils.logger import log_manager
 from src.utils.error_handler import error_handler
 from src.core.gesture_service import gesture_service
@@ -19,8 +21,10 @@ from src.core.system_control import system_controller
 
 
 class TrayApplication:
-    def __init__(self):
-        self.app = QApplication(sys.argv)
+    def __init__(self, app=None):
+        self.app = app or QApplication.instance() or QApplication(sys.argv)
+        self.app.setApplicationName(APP_NAME)
+        self.app.setApplicationDisplayName(APP_NAME)
         self.app.setQuitOnLastWindowClosed(False)
 
         # 安装全局错误处理器
@@ -39,7 +43,7 @@ class TrayApplication:
         # 创建托盘图标
         self.tray_icon = QSystemTrayIcon()
         self.tray_icon.setIcon(get_application_icon())
-        self.tray_icon.setToolTip("VCGCA-Lite")
+        self.tray_icon.setToolTip(APP_NAME)
 
         # 创建托盘菜单
         self.create_tray_menu()
@@ -82,12 +86,20 @@ class TrayApplication:
 
         menu.addSeparator()
 
+        privacy_action = QAction("隐私说明", self.app)
+        privacy_action.triggered.connect(self.show_privacy_notice)
+        menu.addAction(privacy_action)
+
         # 退出
         exit_action = QAction("退出", self.app)
         exit_action.triggered.connect(self.quit)
         menu.addAction(exit_action)
 
         self.tray_icon.setContextMenu(menu)
+
+    def show_privacy_notice(self):
+        if review_mediapipe_consent(settings_manager):
+            self.quit()
 
     def update_open_folder_visibility(self):
         """根据设置更新'打开截图文件夹'菜单的可见性"""

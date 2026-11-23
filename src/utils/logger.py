@@ -8,14 +8,15 @@
 import sys
 import os
 from pathlib import Path
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
+from src.utils.version import APP_DATA_DIR_NAME
 
 
 class LogManager(QObject):
     """简化日志管理器"""
 
     # 信号：新日志消息 (level, message)
-    new_log_message = pyqtSignal(str, str)
+    new_log_message = Signal(str, str)
 
     # 最大保留日志条数
     MAX_LOG_LINES = 2000
@@ -24,7 +25,7 @@ class LogManager(QObject):
         super().__init__()
 
         # 日志目录
-        self.log_dir = Path.home() / '.vcgca-lite'
+        self.log_dir = Path.home() / APP_DATA_DIR_NAME
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
         # 单一日志文件

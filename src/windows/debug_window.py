@@ -1,20 +1,21 @@
 import cv2
 import numpy as np
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QTextEdit
-from PyQt6.QtGui import QImage, QPixmap, QIcon
+from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QTextEdit
+from PySide6.QtGui import QImage, QPixmap, QIcon
 
 from src.core.gesture_service import gesture_service
 from src.utils.icon_helper import get_application_icon
+from src.utils.version import APP_NAME
 
 
 class DebugWindow(QWidget):
-    closed = pyqtSignal()
+    closed = Signal()
 
     def __init__(self):
         super().__init__()
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.setWindowTitle("VCGCA-Lite 调试窗口 - 视频预览")
+        self.setWindowTitle(f"{APP_NAME} 调试窗口 - 视频预览")
         self.setMinimumSize(700, 650)
         self.setWindowIcon(get_application_icon())
 

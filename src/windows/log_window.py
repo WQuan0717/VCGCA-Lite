@@ -5,25 +5,26 @@
 - 支持筛选和暂停刷新
 """
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QTextEdit, QPushButton, QLabel, QComboBox, QCheckBox
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QTextCharFormat, QFont
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QTextCharFormat, QFont
 
 from src.utils.logger import log_manager
 from src.utils.icon_helper import get_application_icon
+from src.utils.version import APP_NAME
 
 
 class LogWindow(QMainWindow):
     """简化日志查看器窗口"""
-    closed = pyqtSignal()
+    closed = Signal()
 
     def __init__(self):
         super().__init__()
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.setWindowTitle("日志查看器 - VCGCA-Lite")
+        self.setWindowTitle(f"日志查看器 - {APP_NAME}")
         self.setMinimumSize(800, 500)
         self.setWindowIcon(get_application_icon())
 

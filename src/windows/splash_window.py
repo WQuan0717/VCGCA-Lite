@@ -1,18 +1,18 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar, QGraphicsDropShadowEffect
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QPainter, QBrush, QLinearGradient
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar, QGraphicsDropShadowEffect
+from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, Signal
+from PySide6.QtGui import QColor, QFont, QPainter, QBrush, QLinearGradient
 
-from src.utils.version import get_version_string
+from src.utils.version import APP_NAME, APP_ENGLISH_NAME, get_version_string
 from src.utils.icon_helper import get_application_icon
 
 
 class SplashWindow(QWidget):
     """启动动画窗口 - 支持真实进度显示"""
-    finished = pyqtSignal()
+    finished = Signal()
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("VCGCA-Lite")
+        self.setWindowTitle(APP_NAME)
         self.setFixedSize(400, 250)
         self.setWindowIcon(get_application_icon())
         
@@ -51,7 +51,7 @@ class SplashWindow(QWidget):
         layout.setSpacing(15)
         
         # 应用名称
-        title_label = QLabel("VCGCA-Lite")
+        title_label = QLabel(APP_NAME)
         title_font = QFont("Microsoft YaHei", 24, QFont.Weight.Bold)
         title_label.setFont(title_font)
         title_label.setStyleSheet("color: #3498db;")
@@ -59,8 +59,8 @@ class SplashWindow(QWidget):
         layout.addWidget(title_label)
         
         # 副标题
-        subtitle_label = QLabel("系统工具")
-        subtitle_font = QFont("Microsoft YaHei", 12)
+        subtitle_label = QLabel(APP_ENGLISH_NAME)
+        subtitle_font = QFont("Microsoft YaHei", 9)
         subtitle_label.setFont(subtitle_font)
         subtitle_label.setStyleSheet("color: #95a5a6;")
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
