@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QLineEdit, QCheckBox, QGroupBox,
                              QSpinBox, QComboBox, QTabWidget, QSlider, QGridLayout,
                              QTextBrowser, QTableWidget, QTableWidgetItem, QHeaderView,
-                             QAbstractItemView, QDialog, QFileDialog)
+                             QAbstractItemView, QDialog, QFileDialog, QScrollArea, QFrame)
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon, QFont
 
@@ -718,10 +718,26 @@ class SettingsWindow(QWidget):
         copyright_label.setStyleSheet("color: #95a5a6; margin-top: 10px;")
         layout.addWidget(copyright_label)
 
+        # LGPL 3.0 section 4(c): show the library's copyright and tell users
+        # where to find both the LGPL and GPL whenever the app shows copyright.
+        qt_notice = QLabel(
+            "Qt / PySide6 © The Qt Company Ltd. 及其他贡献者\n"
+            "依 GNU LGPL 3.0 使用；GPL 与 LGPL 许可原文见程序目录 "
+            "third_party/licenses/qt/qtbase/LICENSES/。"
+        )
+        qt_notice.setWordWrap(True)
+        qt_notice.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        qt_notice.setStyleSheet("color: #65727d; margin: 6px;")
+        layout.addWidget(qt_notice)
+
         layout.addStretch()
 
         tab.setLayout(layout)
-        return tab
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_area.setWidget(tab)
+        return scroll_area
 
     def connect_change_signals(self):
         """连接所有控件的变更信号"""

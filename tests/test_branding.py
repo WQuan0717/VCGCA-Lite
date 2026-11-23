@@ -18,6 +18,8 @@ def test_real_windows_show_consistent_new_name(qapp):
         assert all(APP_NAME in window.windowTitle() for window in windows)
         labels = [label.text() for window in windows for label in window.findChildren(QLabel)]
         assert APP_ENGLISH_NAME in labels
+        assert any("The Qt Company Ltd." in text and "LGPL" in text
+                   and "third_party/licenses/qt/qtbase/LICENSES/" in text for text in labels)
         help_text = " ".join(browser.toPlainText() for browser in windows[-1].findChildren(QTextBrowser))
         assert f"{APP_EXECUTABLE_NAME}.exe" in help_text
         assert "VCGCA-Lite" not in help_text
